@@ -38,7 +38,20 @@ def capturar_clases(class_names, output_dir, seconds_per_class=10,
     cap = cv2.VideoCapture(camera_index)
     if not cap.isOpened():
         print(f"No se pudo abrir la cámara (índice {camera_index})")
-        print("Intente cambiar camera_index a 1")
+        print()
+        # Detectar WSL
+        try:
+            with open('/proc/version', 'r') as f:
+                if 'microsoft' in f.read().lower():
+                    print("Detectado WSL2: la cámara USB no está disponible desde Linux.")
+                    print("Ejecute este script desde PowerShell/CMD en Windows.")
+                    return None
+        except Exception:
+            pass
+        print("Sugerencias:")
+        print(f"  - Intente con --camara 1 (otro índice)")
+        print(f"  - Verifique que la cámara esté conectada")
+        print(f"  - En Windows: ejecute desde PowerShell, no desde WSL")
         return None
 
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
