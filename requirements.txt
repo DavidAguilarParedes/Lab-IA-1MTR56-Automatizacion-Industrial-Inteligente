@@ -1,0 +1,8 @@
+opcua
+tensorflow
+pillow
+opencv-python
+matplotlib
+seaborn
+ipywidgets
+scikit-learn

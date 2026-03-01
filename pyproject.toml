@@ -1,0 +1,19 @@
+[project]
+name = "pucp"
+version = "0.1.0"
+description = "Laboratorio de IA: Clasificación de imágenes con CNN"
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+
+dependencies = [
+    "ipykernel==6.30.1",
+    "ipywidgets>=8.0.0",
+    "matplotlib>=3.9.0",
+    "opcua==0.98.13",
+    "opencv-python==4.12.0.88",
+    "pillow==11.0.0",
+    "scikit-learn>=1.5.0",
+    "scipy>=1.15.3",
+    "seaborn==0.13.2",
+    "tensorflow==2.20.0",
+]

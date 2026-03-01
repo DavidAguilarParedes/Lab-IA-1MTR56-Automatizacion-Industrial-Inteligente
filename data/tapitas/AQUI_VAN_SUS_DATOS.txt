@@ -1,0 +1,11 @@
+Este directorio debe contener subcarpetas con imágenes de tapitas.
+Use scripts/dividir_video.py para extraer frames de sus videos.
+
+Estructura esperada:
+  tapitas/
+    rojo/
+      frame_rojo_00001.jpg
+      frame_rojo_00002.jpg
+    azul/
+      frame_azul_00001.jpg
+      ...
