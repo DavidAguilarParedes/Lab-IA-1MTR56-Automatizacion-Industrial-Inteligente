@@ -13,6 +13,7 @@ pucp/
 │   └── probador.ipynb                   # Teachable Machine: entrenar/probar modelos
 │
 ├── scripts/                             # Scripts de soporte
+│   ├── capturar_clases.py               # Captura imágenes por clase desde cámara
 │   ├── dividir_video.py                 # Extrae frames de video para dataset
 │   └── prueba_video.py                  # Prueba el modelo con cámara en vivo
 │
