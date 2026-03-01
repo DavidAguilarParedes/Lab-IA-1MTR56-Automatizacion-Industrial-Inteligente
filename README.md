@@ -9,7 +9,8 @@ pucp/
 ├── labs/                                # Notebooks de laboratorio
 │   ├── lab1_cnn_basica.ipynb            # CNN básica (botellas glass/plastic)
 │   ├── lab2_data_augmentation.ipynb     # Data augmentation
-│   └── lab3_clasificacion_tapitas.ipynb # Proyecto: clasificación de tapitas
+│   ├── lab3_clasificacion_tapitas.ipynb # Proyecto: clasificación de tapitas
+│   └── probador.ipynb                   # Probador de modelos entrenados
 │
 ├── scripts/                             # Scripts de soporte
 │   ├── dividir_video.py                 # Extrae frames de video para dataset
@@ -62,8 +63,9 @@ pip install -r requirements.txt
 1. Grabe videos de tapitas en la **zona de inspección** con el celular fijo
 2. Ejecute `scripts/dividir_video.py` para extraer frames al directorio `data/tapitas/`
 3. Abra `labs/lab3_clasificacion_tapitas.ipynb` y siga las instrucciones
-4. Exporte el modelo entrenado
-5. Configure y ejecute `scripts/prueba_video.py` para probar en tiempo real
+4. Exporte el modelo entrenado (.h5)
+5. Abra `labs/probador.ipynb` para cargar y evaluar su modelo
+6. Configure y ejecute `scripts/prueba_video.py` para probar en tiempo real
 
 ## Uso de Jupyter
 
