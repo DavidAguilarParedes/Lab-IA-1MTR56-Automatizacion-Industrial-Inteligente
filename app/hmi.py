@@ -119,6 +119,7 @@ class HMIApp(ctk.CTk):
                                    fg_color=BG_SURFACE)
         self.topbar.grid(row=0, column=0, sticky="ew")
         self.topbar.grid_columnconfigure(1, weight=1)
+        self.topbar.grid_columnconfigure(2, weight=0)
         self.topbar.grid_propagate(False)
 
         # Línea de acento superior
@@ -133,12 +134,19 @@ class HMIApp(ctk.CTk):
         )
         self.live_dot.grid(row=0, column=0, padx=(12, 0))
 
+        # Indicador de modelo
+        self.model_indicator = ctk.CTkLabel(
+            self.topbar, text="Sin modelo",
+            font=ctk.CTkFont(size=11), text_color=WARN,
+        )
+        self.model_indicator.grid(row=0, column=1, padx=10, sticky="e")
+
         # PLC status
         self.plc_status_label = ctk.CTkLabel(
             self.topbar, text="PLC: Desconectado",
             font=ctk.CTkFont(size=11), text_color=TEXT_DIM,
         )
-        self.plc_status_label.grid(row=0, column=1, padx=10, sticky="e")
+        self.plc_status_label.grid(row=0, column=2, padx=(0, 10), sticky="e")
 
         # Botón config toggle
         self.btn_config_toggle = ctk.CTkButton(
@@ -148,7 +156,7 @@ class HMIApp(ctk.CTk):
             text_color=TEXT_LO, hover_color=BG_RAISED, corner_radius=3,
             command=self._toggle_config,
         )
-        self.btn_config_toggle.grid(row=0, column=2, padx=(0, 10), pady=6)
+        self.btn_config_toggle.grid(row=0, column=3, padx=(0, 10), pady=6)
 
     # ══════════════════════════════════════
     #  MAIN — cámara + resultado
@@ -698,10 +706,17 @@ class HMIApp(ctk.CTk):
                 text=f"{fname}  |  {tipo} {img_size}px  |  {len(class_names)} clases",
                 text_color=TEXT_LO,
             )
+            # Actualizar indicador en topbar
+            short = fname[:20] + "..." if len(fname) > 23 else fname
+            self.model_indicator.configure(
+                text=f"{short}  ({len(class_names)} clases)",
+                text_color=OK,
+            )
             self._log(f"OK   {fname} ({tipo}, {img_size}px, {len(class_names)} clases)")
         except Exception as e:
             self._log(f"ERR  {e}")
             self.lbl_model_status.configure(text=f"Error: {e}", text_color=FAIL)
+            self.model_indicator.configure(text="Error modelo", text_color=FAIL)
         finally:
             self.btn_cargar.configure(state="normal", text="Cargar")
 
