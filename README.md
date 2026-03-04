@@ -1,234 +1,81 @@
-# Laboratorio de Inteligencia Artificial — PUCP
+# Laboratorio de IA — Clasificacion de Imagenes con CNN
 
-Clasificacion de imagenes con Redes Neuronales Convolucionales (CNN).
-Incluye labs guiados, proyecto del alumno con entrenamiento propio, y un HMI industrial para integracion con PLC Beckhoff.
+## Instalacion
 
----
+### 1. Instalar Python 3.10
 
-## Requisitos
+Descargar de https://www.python.org/downloads/release/python-31011/
 
-- **Python 3.10** (no usar 3.12 ni 3.13, TensorFlow no es compatible)
-- **Windows 10/11** con PowerShell (tambien funciona en Linux/Mac)
-- Camara web (para captura de datos y HMI en vivo)
+**IMPORTANTE:** Al instalar, marcar la casilla **"Add Python to PATH"**.
 
-> Si no tiene Python 3.10, descargarlo de https://www.python.org/downloads/release/python-31011/
-> Al instalar, **marcar la casilla "Add Python to PATH"**.
+### 2. Descargar este proyecto
 
----
+Descargar el ZIP desde GitHub (boton verde "Code" > "Download ZIP") y descomprimirlo.
 
-## Instalacion paso a paso (Windows PowerShell)
-
-### 1. Descargar el proyecto
-
-```powershell
+O si tiene git:
+```
 git clone https://github.com/DavidAguilarParedes/Lab-IA-1MTR56-Automatizacion-Industrial-Inteligente.git
-cd Lab-IA-1MTR56-Automatizacion-Industrial-Inteligente
 ```
 
-Si no tiene `git`, puede descargar el ZIP desde GitHub y descomprimirlo.
+### 3. Instalar dependencias
 
-### 2. Crear entorno virtual e instalar dependencias
+Abrir la carpeta del proyecto en **Visual Studio Code**. Luego abrir una terminal (Menu: Terminal > New Terminal) y ejecutar:
 
-```powershell
+```
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+```
+
+VS Code detectara el entorno virtual y preguntara si desea usarlo. Hacer clic en **"Yes"**.
+
+Cerrar la terminal y abrir una nueva (para que use el entorno virtual). Luego:
+
+```
 pip install -r requirements.txt
 ```
 
-> **Nota:** Si PowerShell no permite ejecutar scripts, ejecute primero:
-> ```powershell
-> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-> ```
+La instalacion puede tardar varios minutos por TensorFlow. Es normal.
 
-> **Nota:** La instalacion de TensorFlow puede tardar varios minutos. Es normal.
+### 4. Verificar
 
-### 3. Verificar que todo funciona
-
-```powershell
-python -c "import tensorflow; print('TensorFlow OK:', tensorflow.__version__)"
-python -c "import cv2; print('OpenCV OK:', cv2.__version__)"
+En la terminal de VS Code:
 ```
+python -c "import tensorflow; print(tensorflow.__version__)"
+```
+
+Si imprime la version (ej: `2.20.0`), todo esta listo.
 
 ---
 
-## Como abrir cada cosa
+## Como usar
 
-**Importante:** Siempre activar el entorno virtual antes de ejecutar cualquier comando:
+### Notebooks (labs y proyecto)
 
-```powershell
-cd Lab-IA-1MTR56-Automatizacion-Industrial-Inteligente
-.\.venv\Scripts\Activate.ps1
+Abrir cualquier archivo `.ipynb` en VS Code y ejecutar las celdas.
+
+- `labs/` — Laboratorios guiados (seguir instrucciones del profesor)
+- `proyecto/entrenar.ipynb` — Entrenar su propio modelo
+- `proyecto/probador.ipynb` — Probar modelo interactivamente
+
+### HMI Industrial (Control de Calidad + PLC)
+
+En la terminal de VS Code:
 ```
-
-Cuando el entorno esta activo, vera `(.venv)` al inicio de la linea de comandos.
-
-### Aplicacion web (Gradio) — desarrollo y pruebas
-
-```powershell
-python -m app.main
-```
-
-Se abre en el navegador en http://localhost:7860. Tiene 3 pestanas:
-1. **Datos** — Crear dataset desde camara
-2. **Probar** — Probar modelo con imagen o camara
-3. **HMI** — Version web del HMI (para desarrollo)
-
-### HMI Industrial (CustomTkinter) — produccion
-
-```powershell
 python -m app.hmi
 ```
 
-Abre una ventana de escritorio con:
-- Camara en vivo con prediccion en tiempo real
-- Panel de resultado con clase y confianza
-- Selector de modelo (dropdown + buscar archivo)
-- Conexion a PLC Beckhoff via pyads
-- Snippet de codigo PLC que se actualiza en vivo
-
-### Jupyter Notebooks — labs y proyecto
-
-```powershell
-jupyter notebook
-```
-
-Se abre en el navegador. Navegar a la carpeta deseada (`labs/` o `proyecto/`).
+1. Seleccionar modelo en el panel derecho y hacer clic en "Cargar"
+2. La camara muestra la prediccion en tiempo real
+3. "EJECUTAR INSPECCION" clasifica y envia resultado al PLC
+4. Para conectar al PLC: abrir "Config PLC" e ingresar AMS Net ID
 
 ---
 
-## Estructura del proyecto
+## Solucion de problemas
 
-```
-pucp/
-├── app/                          # Aplicacion
-│   ├── main.py                   # App web Gradio: python -m app.main
-│   ├── hmi.py                    # HMI standalone: python -m app.hmi
-│   ├── config.py                 # Constantes y configuracion
-│   ├── datos.py                  # Utilidades de dataset
-│   ├── modelo.py                 # Arquitecturas CNN y MobileNetV2
-│   ├── plc.py                    # Comunicacion PLC Beckhoff (pyads)
-│   └── ui/                       # Pestanas de la interfaz web
-│       ├── tab_datos.py          # Tab 1: Crear/cargar dataset
-│       ├── tab_probar.py         # Tab 2: Probar predicciones
-│       ├── tab_hmi.py            # Tab 3: HMI en Gradio
-│       └── pred_html.py          # Renderizado HTML de predicciones
-│
-├── labs/                          # Notebooks guiados por el profesor
-│   ├── lab1_cnn_basica.ipynb      # Lab 1: CNN basica (botellas)
-│   ├── lab2_data_augmentation.ipynb  # Lab 2: Data Augmentation
-│   └── lab3_clasificacion_tapitas.ipynb  # Lab 3: Tapitas
-│
-├── proyecto/                      # Proyecto del alumno
-│   ├── entrenar.ipynb             # Entrenar su propio modelo
-│   ├── probador.ipynb             # Probar modelo interactivamente
-│   └── modelos/                   # Modelos entrenados (ejemplo incluido)
-│
-├── scripts/                       # Scripts auxiliares
-│   ├── capturar_clases.py         # Capturar imagenes por clase
-│   ├── dividir_video.py           # Extraer frames de un video
-│   ├── prueba_video.py            # Probar modelo con camara en vivo
-│   ├── inferencia_plc.py          # Plantilla: inferencia + PLC
-│   └── simular_plc.py             # Simulador PLC para pruebas
-│
-├── data/                          # Datasets
-│   ├── botellas/                  # Dataset ejemplo (glass/plastic)
-│   └── tapitas/                   # Datos del alumno
-│
-├── docs/                          # Documentacion del curso
-│   └── guia_2025-2_IA.pdf
-│
-├── requirements.txt               # Dependencias (pip install -r requirements.txt)
-└── pyproject.toml                 # Configuracion del proyecto
-```
-
----
-
-## Flujo de trabajo del proyecto
-
-### Paso 1: Capturar dataset
-
-Usar la app web (Tab 1 — Datos) o el script:
-
-```powershell
-python scripts/capturar_clases.py rojo azul verde --tiempo 15
-```
-
-### Paso 2: Entrenar modelo
-
-Abrir `proyecto/entrenar.ipynb` en Jupyter y ejecutar celda por celda.
-El alumno ve y modifica: data augmentation, arquitectura, hiperparametros.
-
-```powershell
-jupyter notebook proyecto/entrenar.ipynb
-```
-
-### Paso 3: Probar modelo
-
-```powershell
-# Opcion A: App web (Tab 2)
-python -m app.main
-
-# Opcion B: Camara en vivo (script)
-python scripts/prueba_video.py
-```
-
-### Paso 4: HMI + PLC
-
-```powershell
-python -m app.hmi
-```
-
-1. Seleccionar modelo en el panel derecho (dropdown o "Buscar...")
-2. Hacer clic en "Cargar"
-3. La camara muestra prediccion en tiempo real
-4. Abrir "Config PLC" para conectar al PLC Beckhoff
-5. "EJECUTAR INSPECCION" clasifica multiples frames y envia resultado al PLC
-
----
-
-## Solucion de problemas comunes
-
-### "python no se reconoce como comando"
-Python no esta en el PATH. Reinstalar Python y marcar "Add Python to PATH".
-
-### "No module named tensorflow"
-El entorno virtual no esta activado. Ejecutar:
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-### "cannot be loaded because running scripts is disabled"
-Ejecutar en PowerShell:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### "No se pudo abrir la camara"
-- Verificar que la camara no este siendo usada por otra aplicacion
-- En laptops con doble camara, cambiar `CAMERA_INDEX = 0` por `1` en `app/hmi.py`
-
-### La instalacion de TensorFlow falla
-- Verificar que tiene Python 3.10 (no 3.12 ni 3.13)
-- Verificar con: `python --version`
-
-### "pip install" tarda mucho
-Es normal. TensorFlow es un paquete grande (~500 MB). Esperar a que termine.
-
----
-
-## Instalacion alternativa con uv (avanzado)
-
-Si prefiere usar `uv` en vez de pip:
-
-```powershell
-# Instalar uv
-irm https://astral.sh/uv/install.ps1 | iex
-
-# Instalar todo automaticamente
-uv sync
-
-# Ejecutar comandos con uv
-uv run python -m app.main
-uv run python -m app.hmi
-uv run jupyter notebook
-```
+| Problema | Solucion |
+|---|---|
+| `python` no se reconoce | Reinstalar Python marcando "Add Python to PATH" |
+| No module named tensorflow | Cerrar y reabrir la terminal de VS Code |
+| La camara no abre | Cerrar otras apps que usen la camara |
+| pip install tarda mucho | Normal, TensorFlow es grande (~500 MB) |
+| TensorFlow falla al instalar | Verificar que tiene Python 3.10 (`python --version`) |

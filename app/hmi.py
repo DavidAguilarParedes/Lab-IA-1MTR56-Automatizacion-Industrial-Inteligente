@@ -10,6 +10,7 @@ Panel de configuración lateral colapsable con snippet de código pyads dinámic
 
 import os
 import sys
+import glob
 import json
 import time
 import threading
@@ -27,7 +28,33 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.config import BASE_DIR, PLC_DEFAULTS
 from app.datos import preprocess_image
 from app.plc import plc_bridge
-from app.ui.tab_hmi import _discover_models
+
+
+def _discover_models():
+    """Descubre modelos .h5/.keras con metadata JSON."""
+    modelos = {}
+    search_dirs = [
+        os.path.join(BASE_DIR, 'modelos'),
+        os.path.join(BASE_DIR, 'proyecto', 'modelos'),
+    ]
+    for d in search_dirs:
+        if not os.path.isdir(d):
+            continue
+        for ext in ('*.h5', '*.keras'):
+            for h5 in glob.glob(os.path.join(d, ext)):
+                json_path = h5.rsplit('.', 1)[0] + '.json'
+                meta = {}
+                if os.path.exists(json_path):
+                    with open(json_path) as f:
+                        meta = json.load(f)
+                mb = os.path.getsize(h5) / 1024 / 1024
+                va = meta.get('val_accuracy')
+                label = os.path.basename(h5)
+                if va is not None:
+                    label += f" (val {va:.0%})"
+                label += f" [{mb:.0f}MB]"
+                modelos[label] = {'path': h5, 'meta': meta}
+    return modelos
 
 # ── Configuración ──
 
