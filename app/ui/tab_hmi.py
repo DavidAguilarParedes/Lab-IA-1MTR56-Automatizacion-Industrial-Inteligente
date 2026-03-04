@@ -100,17 +100,18 @@ def _load_model_hmi(model_path):
     return class_names, img_size, preprocessing
 
 
-def _classify_frame(frame):
-    """Clasifica un frame BGR de OpenCV. Retorna (clase_idx, clase_nombre, confianza, preds)."""
+def _classify_frame(frame_rgb):
+    """Clasifica un frame RGB (numpy array de Gradio).
+
+    Returns:
+        (clase_idx, clase_nombre, confianza, preds_list)
+    """
     model = hmi_state['model']
     if model is None:
         return -1, '—', 0.0, []
 
     sz = hmi_state['img_size']
-    img = cv2.resize(frame, (sz, sz))
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    arr = preprocess_image(img, sz, hmi_state['preprocessing'])
+    arr = preprocess_image(frame_rgb, sz, hmi_state['preprocessing'])
     preds = model.predict(arr, verbose=0)[0]
 
     idx = int(np.argmax(preds))
@@ -119,14 +120,16 @@ def _classify_frame(frame):
     return idx, nombre, conf, preds.tolist()
 
 
-def _run_inspection(cap, n_captures):
-    """Ejecuta inspección: captura N fotos, clasifica, voto mayoritario.
+def _run_inspection_from_frame(frame_rgb):
+    """Ejecuta inspección usando un frame RGB de Gradio.
+
+    Clasifica el frame, guarda captura, retorna resultado.
 
     Returns:
-        (clase_idx, clase_nombre, confianza, capturas_paths, detalles)
+        (clase_idx, clase_nombre, confianza, captura_path, detalles)
     """
     if hmi_state['model'] is None:
-        return -1, '—', 0.0, [], []
+        return -1, '—', 0.0, '', []
 
     # Crear carpeta de sesión
     if not hmi_state['session_dir']:
@@ -134,38 +137,16 @@ def _run_inspection(cap, n_captures):
         hmi_state['session_dir'] = os.path.join(BASE_DIR, 'capturas', f'sesion_{ts}')
     os.makedirs(hmi_state['session_dir'], exist_ok=True)
 
-    capturas = []
-    detalles = []
-    all_preds = []
+    idx, nombre, conf, preds = _classify_frame(frame_rgb)
 
-    for i in range(n_captures):
-        ret, frame = cap.read()
-        if not ret:
-            continue
+    # Guardar captura (convertir RGB→BGR para cv2.imwrite)
+    ts = datetime.datetime.now().strftime('%H%M%S_%f')[:-3]
+    path = os.path.join(hmi_state['session_dir'], f'insp_{ts}.jpg')
+    frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(path, frame_bgr)
 
-        idx, nombre, conf, preds = _classify_frame(frame)
-
-        # Guardar captura
-        ts = datetime.datetime.now().strftime('%H%M%S_%f')[:-3]
-        path = os.path.join(hmi_state['session_dir'], f'insp_{ts}.jpg')
-        cv2.imwrite(path, frame)
-
-        capturas.append(path)
-        detalles.append({'clase': nombre, 'idx': idx, 'confianza': conf})
-        all_preds.append(preds)
-
-        time.sleep(0.05)  # breve pausa entre capturas
-
-    if not all_preds:
-        return -1, '—', 0.0, [], []
-
-    # Voto por promedio de confianzas
-    mean_preds = np.mean(all_preds, axis=0)
-    final_idx = int(np.argmax(mean_preds))
-    final_nombre = hmi_state['class_names'][final_idx]
-    final_conf = float(mean_preds[final_idx])
-
-    return final_idx, final_nombre, final_conf, capturas, detalles
+    detalles = [{'clase': nombre, 'idx': idx, 'confianza': conf}]
+    return idx, nombre, conf, path, detalles
 
 
 def _history_to_table():
@@ -354,35 +335,26 @@ def create():
         hmi_state['captures_per_inspection'] = int(n_cap)
         hmi_state['confidence_threshold'] = threshold
 
-    def forzar_inspeccion():
-        """Ejecuta inspección manual sin PLC."""
+    def forzar_inspeccion(cam_frame):
+        """Ejecuta inspección manual usando el frame actual del webcam de Gradio."""
         if hmi_state['model'] is None:
             return (
-                "FALTA MODELO", "—", "—%", "",
+                "FALTA MODELO", "—", "—%", "Cargue un modelo en Configuracion.",
                 _history_to_table(), plc_bridge.get_log()
             )
 
-        # Abrir cámara para captura rápida
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
+        if cam_frame is None:
             return (
-                "ERROR CAMARA", "—", "—%", "No se pudo abrir camara",
+                "SIN CAMARA", "—", "—%",
+                "Active la camara en el feed antes de forzar inspeccion.",
                 _history_to_table(), plc_bridge.get_log()
             )
 
-        try:
-            n = hmi_state['captures_per_inspection']
-            # Descartar algunos frames para que la cámara se estabilice
-            for _ in range(5):
-                cap.read()
-
-            idx, nombre, conf, paths, detalles = _run_inspection(cap, n)
-        finally:
-            cap.release()
+        idx, nombre, conf, path, detalles = _run_inspection_from_frame(cam_frame)
 
         if idx < 0:
             return (
-                "ERROR", "—", "—%", "Inspección fallida",
+                "ERROR", "—", "—%", "Inspeccion fallida",
                 _history_to_table(), plc_bridge.get_log()
             )
 
@@ -404,11 +376,7 @@ def create():
                 hmi_state['var_confianza'],
             )
 
-        # Detalle de cada captura
-        detail_lines = []
-        for i, d in enumerate(detalles):
-            detail_lines.append(f"  #{i+1}: {d['clase']} ({d['confianza']:.0%})")
-        detail_str = f"{n} capturas → voto: {nombre}\n" + "\n".join(detail_lines)
+        detail_str = f"Clase: {nombre} | Confianza: {conf:.0%}\nCaptura: {path}"
 
         ok_str = "OK" if conf >= threshold else "BAJA CONFIANZA"
         status = f"RESULTADO: {ok_str}"
@@ -456,6 +424,7 @@ def create():
 
     btn_manual.click(
         forzar_inspeccion,
+        inputs=[cam_feed],
         outputs=[
             status_hmi, result_clase, result_conf, result_detail,
             history_table, plc_log,
