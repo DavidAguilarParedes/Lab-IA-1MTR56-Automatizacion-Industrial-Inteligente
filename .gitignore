@@ -1,4 +1,4 @@
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
 build/
@@ -7,22 +7,31 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
+.venv/
 
-# Datos generados (splits de train/validation)
+# Datos generados por el alumno
+data/mi_dataset/
+data/mi_dataset_split/
 data/botellas_split/
 data/tapitas_split/
-
-# Datos del alumno (creados con dividir_video.py)
 data/tapitas/*/
 
-# Modelos entrenados
+# Modelos entrenados (cada alumno genera los suyos)
+# Los modelos en proyecto/modelos/ SI se commitean como ejemplo
 *.h5
 *.keras
+!proyecto/modelos/*.h5
+!proyecto/modelos/*.keras
+!proyecto/modelos/*.json
 modelo_arquitectura.png
 
-# Capturas de prueba
+# Capturas del HMI
+capturas/
 captura_*.jpg
 
-# Jupyter checkpoints
+# Jupyter
 .ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/

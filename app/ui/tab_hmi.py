@@ -1,11 +1,14 @@
-"""Tab 3: HMI de producción — Control de calidad con PLC Beckhoff."""
+"""Tab 3: HMI de producción — Control de calidad con PLC Beckhoff.
+
+Layout industrial simplificado: cámara grande + resultado prominente.
+Inspección multi-frame con buffer circular.
+"""
 
 import os
 import glob
 import json
-import time
-import threading
 import datetime
+from collections import deque
 
 import cv2
 import gradio as gr
@@ -25,17 +28,16 @@ hmi_state = {
     'img_size': 128,
     'preprocessing': 'rescale',
     'model_path': '',
-    'polling': False,
-    'poll_thread': None,
     'history': [],
-    'captures_per_inspection': 5,
     'confidence_threshold': 0.6,
     'var_inicio': 'GVL.bInicioControlDeCalidad',
     'var_clase': 'GVL.nResultadoClase',
     'var_confianza': 'GVL.rConfianza',
     'session_dir': '',
-    'last_status': 'ESPERANDO',
 }
+
+# Buffer circular para inspección multi-frame
+frame_buffer = deque(maxlen=10)
 
 
 def _discover_models():
@@ -101,52 +103,47 @@ def _load_model_hmi(model_path):
 
 
 def _classify_frame(frame_rgb):
-    """Clasifica un frame RGB (numpy array de Gradio).
-
-    Returns:
-        (clase_idx, clase_nombre, confianza, preds_list)
-    """
+    """Clasifica un frame RGB. Retorna vector de probabilidades."""
     model = hmi_state['model']
     if model is None:
-        return -1, '—', 0.0, []
+        return None
 
     sz = hmi_state['img_size']
     arr = preprocess_image(frame_rgb, sz, hmi_state['preprocessing'])
     preds = model.predict(arr, verbose=0)[0]
-
-    idx = int(np.argmax(preds))
-    nombre = hmi_state['class_names'][idx]
-    conf = float(preds[idx])
-    return idx, nombre, conf, preds.tolist()
+    return preds
 
 
-def _run_inspection_from_frame(frame_rgb):
-    """Ejecuta inspección usando un frame RGB de Gradio.
+def _render_clase_html(nombre, confianza, threshold):
+    """Genera HTML para el panel lateral de resultado."""
+    if nombre == '—':
+        return (
+            '<div class="hmi-panel">'
+            '<div class="hmi-clase" style="color:#888;">—</div>'
+            '<div class="hmi-conf-track"><div class="hmi-conf-fill" style="width:0%"></div></div>'
+            '<div class="hmi-conf-text">—</div>'
+            '</div>'
+        )
 
-    Clasifica el frame, guarda captura, retorna resultado.
+    pct = confianza * 100
+    color = '#4caf50' if confianza >= threshold else '#f44336'
 
-    Returns:
-        (clase_idx, clase_nombre, confianza, captura_path, detalles)
-    """
-    if hmi_state['model'] is None:
-        return -1, '—', 0.0, '', []
+    return (
+        '<div class="hmi-panel">'
+        f'<div class="hmi-clase">{nombre}</div>'
+        f'<div class="hmi-conf-track">'
+        f'<div class="hmi-conf-fill" style="width:{pct:.0f}%;background:{color}"></div>'
+        f'</div>'
+        f'<div class="hmi-conf-text" style="color:{color}">{pct:.0f}%</div>'
+        '</div>'
+    )
 
-    # Crear carpeta de sesión
-    if not hmi_state['session_dir']:
-        ts = datetime.datetime.now().strftime('%Y%m%d_%H%M')
-        hmi_state['session_dir'] = os.path.join(BASE_DIR, 'capturas', f'sesion_{ts}')
-    os.makedirs(hmi_state['session_dir'], exist_ok=True)
 
-    idx, nombre, conf, preds = _classify_frame(frame_rgb)
-
-    # Guardar captura (convertir RGB→BGR para cv2.imwrite)
-    ts = datetime.datetime.now().strftime('%H%M%S_%f')[:-3]
-    path = os.path.join(hmi_state['session_dir'], f'insp_{ts}.jpg')
-    frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(path, frame_bgr)
-
-    detalles = [{'clase': nombre, 'idx': idx, 'confianza': conf}]
-    return idx, nombre, conf, path, detalles
+def _render_plc_status():
+    """Genera HTML para indicador PLC."""
+    if plc_bridge.connected:
+        return '<div class="hmi-status"><span class="hmi-dot hmi-dot-ok"></span> PLC: OK</div>'
+    return '<div class="hmi-status"><span class="hmi-dot hmi-dot-off"></span> PLC: Desconectado</div>'
 
 
 def _history_to_table():
@@ -160,6 +157,7 @@ def _history_to_table():
             f"{h['confianza']:.0%}",
             ok,
             h.get('modo', '—'),
+            str(h.get('n_frames', 1)),
         ])
     return rows
 
@@ -169,76 +167,54 @@ def create():
     model_choices = list(modelos.keys()) if modelos else ["(no hay modelos)"]
 
     # ══════════════════════════════════════
-    #  LAYOUT HMI
+    #  LAYOUT HMI INDUSTRIAL
     # ══════════════════════════════════════
 
     gr.Markdown("### CONTROL DE CALIDAD — HMI")
 
     with gr.Row():
-        # ── Columna izquierda: cámara ──
-        with gr.Column(scale=1):
-            with gr.Group(elem_classes="card"):
-                cam_feed = gr.Image(
-                    sources=["webcam"],
-                    streaming=True,
-                    type="numpy",
-                    label="Feed de camara",
-                    height=320,
-                )
+        # ── Cámara (70% ancho) ──
+        with gr.Column(scale=3):
+            cam_feed = gr.Image(
+                sources=["webcam"],
+                streaming=True,
+                type="numpy",
+                label="Camara en vivo",
+                height=400,
+            )
 
-        # ── Columna derecha: estado + controles ──
-        with gr.Column(scale=1):
-            with gr.Group(elem_classes="card"):
-                with gr.Row():
-                    status_plc = gr.Textbox(
-                        value="🔴 PLC Desconectado",
-                        label="Estado PLC",
-                        interactive=False,
-                        scale=2,
-                    )
-                    status_hmi = gr.Textbox(
-                        value="ESPERANDO",
-                        label="Estado HMI",
-                        interactive=False,
-                        scale=1,
-                    )
+        # ── Panel lateral resultado (30% ancho) ──
+        with gr.Column(scale=1, elem_classes="hmi-sidebar"):
+            result_html = gr.HTML(
+                value=_render_clase_html('—', 0, 0.6),
+                label="Resultado",
+            )
+            plc_html = gr.HTML(
+                value=_render_plc_status(),
+                label="PLC",
+            )
 
-                result_clase = gr.Textbox(
-                    value="—", label="Clase detectada",
-                    interactive=False,
-                )
-                result_conf = gr.Textbox(
-                    value="—%", label="Confianza",
-                    interactive=False,
-                )
-                result_detail = gr.Textbox(
-                    value="", label="Detalle capturas",
-                    interactive=False, lines=2,
-                )
+    # ── Botón FORZAR ──
+    btn_manual = gr.Button(
+        "FORZAR INSPECCION",
+        variant="primary",
+        size="lg",
+        elem_classes="hmi-btn-forzar",
+    )
 
-            with gr.Group(elem_classes="card"):
-                btn_manual = gr.Button(
-                    "FORZAR INSPECCION",
-                    variant="primary",
-                    size="lg",
-                )
-                gr.Markdown(
-                    "*Ejecuta inspeccion sin esperar señal del PLC.*"
-                )
-
-    # ── Historial ──
-    with gr.Group(elem_classes="card"):
-        gr.Markdown("#### Historial de inspecciones")
+    # ── Historial (acordeón cerrado) ──
+    with gr.Accordion("Historial de inspecciones", open=False):
         history_table = gr.Dataframe(
-            headers=["Hora", "Clase", "Confianza", "Resultado", "Modo"],
-            datatype=["str", "str", "str", "str", "str"],
+            headers=["Hora", "Clase", "Confianza", "Resultado", "Modo", "Frames"],
+            datatype=["str", "str", "str", "str", "str", "str"],
             row_count=5,
-            column_count=(5, "fixed"),
+            column_count=(6, "fixed"),
             interactive=False,
         )
 
-    # ── Configuración (acordeón) ──
+    # ── Configuración (acordeón cerrado) ──
     with gr.Accordion("Configuracion", open=False):
+        gr.Markdown("**Modelo**")
         with gr.Row():
             dd_modelo = gr.Dropdown(
                 choices=model_choices,
@@ -258,7 +234,6 @@ def create():
             inp_ams = gr.Textbox(
                 value="5.80.201.232.1.1",
                 label="AMS Net ID",
-                placeholder="ej: 5.80.201.232.1.1",
                 scale=2,
             )
             inp_port = gr.Number(
@@ -287,22 +262,36 @@ def create():
 
         gr.Markdown("**Parametros de inspeccion**")
         with gr.Row():
-            inp_n_capturas = gr.Slider(
-                minimum=1, maximum=10, value=5, step=1,
-                label="Capturas por inspeccion",
-            )
             inp_threshold = gr.Slider(
                 minimum=0.1, maximum=1.0, value=0.6, step=0.05,
                 label="Threshold de confianza",
             )
 
         plc_log = gr.Textbox(
-            value="", label="Log PLC", lines=4, interactive=False,
+            value="", label="Log PLC", lines=3, interactive=False,
         )
 
     # ══════════════════════════════════════
     #  HANDLERS
     # ══════════════════════════════════════
+
+    def on_stream(frame):
+        """Callback del stream: guarda frame en buffer + predicción live."""
+        if frame is None:
+            return _render_clase_html('—', 0, hmi_state['confidence_threshold'])
+
+        # Guardar en buffer circular
+        frame_buffer.append(frame.copy())
+
+        # Predicción live (preview en sidebar)
+        preds = _classify_frame(frame)
+        if preds is None:
+            return _render_clase_html('—', 0, hmi_state['confidence_threshold'])
+
+        idx = int(np.argmax(preds))
+        nombre = hmi_state['class_names'][idx]
+        conf = float(preds[idx])
+        return _render_clase_html(nombre, conf, hmi_state['confidence_threshold'])
 
     def cargar_modelo(modelo_label):
         if modelo_label not in modelos:
@@ -321,54 +310,81 @@ def create():
 
     def conectar_plc(ams, port):
         ok, msg = plc_bridge.connect(ams, int(port))
-        status = plc_bridge.status_emoji
-        return status, plc_bridge.get_log()
+        return _render_plc_status(), plc_bridge.get_log()
 
     def desconectar_plc():
         plc_bridge.disconnect()
-        return plc_bridge.status_emoji, plc_bridge.get_log()
+        return _render_plc_status(), plc_bridge.get_log()
 
-    def actualizar_vars(var_inicio, var_clase, var_conf, n_cap, threshold):
+    def actualizar_vars(var_inicio, var_clase, var_conf, threshold):
         hmi_state['var_inicio'] = var_inicio
         hmi_state['var_clase'] = var_clase
         hmi_state['var_confianza'] = var_conf
-        hmi_state['captures_per_inspection'] = int(n_cap)
         hmi_state['confidence_threshold'] = threshold
 
-    def forzar_inspeccion(cam_frame):
-        """Ejecuta inspección manual usando el frame actual del webcam de Gradio."""
+    def forzar_inspeccion():
+        """Inspección multi-frame: promedia predicciones del buffer."""
         if hmi_state['model'] is None:
             return (
-                "FALTA MODELO", "—", "—%", "Cargue un modelo en Configuracion.",
-                _history_to_table(), plc_bridge.get_log()
+                _render_clase_html('—', 0, 0.6),
+                _render_plc_status(),
+                _history_to_table(),
+                plc_bridge.get_log(),
             )
 
-        if cam_frame is None:
+        frames = list(frame_buffer)
+        if not frames:
             return (
-                "SIN CAMARA", "—", "—%",
-                "Active la camara en el feed antes de forzar inspeccion.",
-                _history_to_table(), plc_bridge.get_log()
+                _render_clase_html('—', 0, hmi_state['confidence_threshold']),
+                _render_plc_status(),
+                _history_to_table(),
+                plc_bridge.get_log(),
             )
 
-        idx, nombre, conf, path, detalles = _run_inspection_from_frame(cam_frame)
+        # Clasificar cada frame del buffer
+        all_preds = []
+        for f in frames:
+            p = _classify_frame(f)
+            if p is not None:
+                all_preds.append(p)
 
-        if idx < 0:
+        if not all_preds:
             return (
-                "ERROR", "—", "—%", "Inspeccion fallida",
-                _history_to_table(), plc_bridge.get_log()
+                _render_clase_html('—', 0, hmi_state['confidence_threshold']),
+                _render_plc_status(),
+                _history_to_table(),
+                plc_bridge.get_log(),
             )
+
+        # Promedio de predicciones
+        mean_preds = np.mean(all_preds, axis=0)
+        idx = int(np.argmax(mean_preds))
+        nombre = hmi_state['class_names'][idx]
+        conf = float(mean_preds[idx])
+        threshold = hmi_state['confidence_threshold']
+
+        # Guardar captura (último frame)
+        if not hmi_state['session_dir']:
+            ts = datetime.datetime.now().strftime('%Y%m%d_%H%M')
+            hmi_state['session_dir'] = os.path.join(BASE_DIR, 'capturas', f'sesion_{ts}')
+        os.makedirs(hmi_state['session_dir'], exist_ok=True)
+
+        ts = datetime.datetime.now().strftime('%H%M%S_%f')[:-3]
+        path = os.path.join(hmi_state['session_dir'], f'insp_{ts}.jpg')
+        frame_bgr = cv2.cvtColor(frames[-1], cv2.COLOR_RGB2BGR)
+        cv2.imwrite(path, frame_bgr)
 
         # Registrar en historial
-        threshold = hmi_state['confidence_threshold']
         hmi_state['history'].append({
             'timestamp': datetime.datetime.now().strftime('%H:%M:%S'),
             'clase': nombre,
             'clase_idx': idx,
             'confianza': conf,
             'modo': 'Manual',
+            'n_frames': len(all_preds),
         })
 
-        # Intentar enviar al PLC si conectado
+        # Enviar al PLC si conectado
         if plc_bridge.connected:
             plc_bridge.enviar_resultado(
                 idx, conf,
@@ -376,21 +392,20 @@ def create():
                 hmi_state['var_confianza'],
             )
 
-        detail_str = f"Clase: {nombre} | Confianza: {conf:.0%}\nCaptura: {path}"
-
-        ok_str = "OK" if conf >= threshold else "BAJA CONFIANZA"
-        status = f"RESULTADO: {ok_str}"
-
         return (
-            status,
-            nombre,
-            f"{conf:.0%}",
-            detail_str,
+            _render_clase_html(nombre, conf, threshold),
+            _render_plc_status(),
             _history_to_table(),
             plc_bridge.get_log(),
         )
 
     # ── Wiring ──
+
+    cam_feed.stream(
+        on_stream,
+        inputs=[cam_feed],
+        outputs=[result_html],
+    )
 
     btn_cargar.click(
         cargar_modelo,
@@ -401,32 +416,24 @@ def create():
     btn_connect.click(
         conectar_plc,
         inputs=[inp_ams, inp_port],
-        outputs=[status_plc, plc_log],
+        outputs=[plc_html, plc_log],
     )
     btn_disconnect.click(
         desconectar_plc,
-        outputs=[status_plc, plc_log],
+        outputs=[plc_html, plc_log],
     )
 
-    # Guardar variables cuando cambian
     for inp in [inp_var_inicio, inp_var_clase, inp_var_conf]:
         inp.change(
             actualizar_vars,
-            inputs=[inp_var_inicio, inp_var_clase, inp_var_conf,
-                    inp_n_capturas, inp_threshold],
+            inputs=[inp_var_inicio, inp_var_clase, inp_var_conf, inp_threshold],
         )
-    for inp in [inp_n_capturas, inp_threshold]:
-        inp.change(
-            actualizar_vars,
-            inputs=[inp_var_inicio, inp_var_clase, inp_var_conf,
-                    inp_n_capturas, inp_threshold],
-        )
+    inp_threshold.change(
+        actualizar_vars,
+        inputs=[inp_var_inicio, inp_var_clase, inp_var_conf, inp_threshold],
+    )
 
     btn_manual.click(
         forzar_inspeccion,
-        inputs=[cam_feed],
-        outputs=[
-            status_hmi, result_clase, result_conf, result_detail,
-            history_table, plc_log,
-        ],
+        outputs=[result_html, plc_html, history_table, plc_log],
     )
