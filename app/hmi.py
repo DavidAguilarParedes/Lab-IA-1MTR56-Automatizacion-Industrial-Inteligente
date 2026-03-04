@@ -150,7 +150,7 @@ class HMIApp(ctk.CTk):
 
         # Botón config toggle
         self.btn_config_toggle = ctk.CTkButton(
-            self.topbar, text="Configuracion", width=105, height=22,
+            self.topbar, text="Config PLC", width=90, height=22,
             font=ctk.CTkFont(size=11),
             fg_color="transparent", border_width=1, border_color=BORDER,
             text_color=TEXT_LO, hover_color=BG_RAISED, corner_radius=3,
@@ -193,24 +193,75 @@ class HMIApp(ctk.CTk):
                                         border_color=BORDER)
         self.right_frame.grid(row=0, column=1, sticky="nsew", padx=(3, 0))
         self.right_frame.grid_columnconfigure(0, weight=1)
-        self.right_frame.grid_rowconfigure(8, weight=1)  # log se expande
+        self.right_frame.grid_rowconfigure(10, weight=1)  # log se expande
 
+        # ── Sección MODELO (prominente, arriba de todo) ──
+        ctk.CTkLabel(
+            self.right_frame, text="MODELO",
+            font=ctk.CTkFont(size=10, weight="bold"), text_color=TEXT_LO, anchor="w",
+        ).grid(row=0, column=0, padx=14, pady=(10, 0), sticky="w")
+
+        model_choices = list(self.modelos.keys()) if self.modelos else ["(sin modelos)"]
+        self.dd_modelo = ctk.CTkOptionMenu(
+            self.right_frame, values=model_choices,
+            font=ctk.CTkFont(size=10), height=28,
+            fg_color=BG_INSET, button_color=BORDER,
+            button_hover_color=BORDER_HI,
+            dropdown_fg_color=BG_RAISED, dropdown_hover_color=BG_SURFACE,
+            text_color=TEXT,
+        )
+        self.dd_modelo.grid(row=1, column=0, sticky="ew", padx=14, pady=(4, 4))
+
+        btn_modelo_row = ctk.CTkFrame(self.right_frame, fg_color="transparent")
+        btn_modelo_row.grid(row=2, column=0, sticky="ew", padx=14, pady=(0, 4))
+        btn_modelo_row.grid_columnconfigure(0, weight=1)
+
+        self.btn_cargar = ctk.CTkButton(
+            btn_modelo_row, text="Cargar", height=28,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color=ACCENT, hover_color=ACCENT_HOVER,
+            text_color="white", corner_radius=3,
+            command=self._cargar_modelo,
+        )
+        self.btn_cargar.grid(row=0, column=0, sticky="ew", padx=(0, 3))
+
+        self.btn_buscar = ctk.CTkButton(
+            btn_modelo_row, text="Buscar...", height=28, width=80,
+            font=ctk.CTkFont(size=11),
+            fg_color="transparent", hover_color=BG_INSET,
+            text_color=TEXT_LO, corner_radius=3,
+            border_width=1, border_color=BORDER,
+            command=self._buscar_modelo,
+        )
+        self.btn_buscar.grid(row=0, column=1)
+
+        self.lbl_model_status = ctk.CTkLabel(
+            self.right_frame, text="Selecciona un modelo para empezar",
+            font=ctk.CTkFont(size=10), text_color=WARN, anchor="w",
+        )
+        self.lbl_model_status.grid(row=3, column=0, padx=14, pady=(0, 6), sticky="w")
+
+        # ── Separador ──
+        ctk.CTkFrame(self.right_frame, height=1, fg_color=BORDER).grid(
+            row=4, column=0, sticky="ew", padx=10)
+
+        # ── Sección RESULTADO ──
         ctk.CTkLabel(
             self.right_frame, text="RESULTADO",
             font=ctk.CTkFont(size=10), text_color=TEXT_DIM, anchor="w",
-        ).grid(row=0, column=0, padx=14, pady=(10, 0), sticky="w")
+        ).grid(row=5, column=0, padx=14, pady=(8, 0), sticky="w")
 
         self.lbl_clase = ctk.CTkLabel(
             self.right_frame, text="—",
             font=ctk.CTkFont(size=30, weight="bold"),
             text_color=TEXT_HI,
         )
-        self.lbl_clase.grid(row=1, column=0, padx=14, pady=(0, 4), sticky="ew")
+        self.lbl_clase.grid(row=6, column=0, padx=14, pady=(0, 4), sticky="ew")
 
         # Barra de confianza
         self.bar_track = ctk.CTkFrame(self.right_frame, height=14,
                                       fg_color=BG_INSET, corner_radius=3)
-        self.bar_track.grid(row=2, column=0, padx=14, pady=(0, 2), sticky="ew")
+        self.bar_track.grid(row=7, column=0, padx=14, pady=(0, 2), sticky="ew")
         self.bar_track.grid_propagate(False)
 
         self.bar_fill = ctk.CTkFrame(self.bar_track, height=14,
@@ -219,7 +270,7 @@ class HMIApp(ctk.CTk):
 
         # Porcentaje + frames
         stats = ctk.CTkFrame(self.right_frame, fg_color="transparent")
-        stats.grid(row=3, column=0, padx=14, pady=(2, 0), sticky="ew")
+        stats.grid(row=8, column=0, padx=14, pady=(2, 0), sticky="ew")
         stats.grid_columnconfigure(0, weight=1)
 
         self.lbl_conf = ctk.CTkLabel(
@@ -237,9 +288,6 @@ class HMIApp(ctk.CTk):
         self.lbl_frames.grid(row=0, column=1, sticky="e")
 
         # Botón EJECUTAR
-        ctk.CTkFrame(self.right_frame, height=1, fg_color=BORDER).grid(
-            row=4, column=0, sticky="ew", padx=10, pady=(10, 0))
-
         self.btn_forzar = ctk.CTkButton(
             self.right_frame, text="EJECUTAR INSPECCION",
             font=ctk.CTkFont(size=12, weight="bold"),
@@ -247,18 +295,11 @@ class HMIApp(ctk.CTk):
             fg_color=ACCENT, hover_color=ACCENT_HOVER, text_color="white",
             command=self._forzar,
         )
-        self.btn_forzar.grid(row=5, column=0, padx=14, pady=(10, 0), sticky="ew")
-
-        # Info modelo
-        self.lbl_model_status = ctk.CTkLabel(
-            self.right_frame, text="Sin modelo",
-            font=ctk.CTkFont(size=10), text_color=TEXT_DIM, anchor="w",
-        )
-        self.lbl_model_status.grid(row=6, column=0, padx=14, pady=(6, 0), sticky="w")
+        self.btn_forzar.grid(row=9, column=0, padx=14, pady=(10, 0), sticky="ew")
 
         # Log
         ctk.CTkFrame(self.right_frame, height=1, fg_color=BORDER).grid(
-            row=7, column=0, sticky="ew", padx=10, pady=(8, 0))
+            row=10, column=0, sticky="ew", padx=10, pady=(8, 0))
 
         self.log_textbox = ctk.CTkTextbox(
             self.right_frame,
@@ -267,7 +308,7 @@ class HMIApp(ctk.CTk):
             corner_radius=3, border_width=0,
             state="disabled", wrap="none",
         )
-        self.log_textbox.grid(row=8, column=0, padx=8, pady=(4, 8), sticky="nsew")
+        self.log_textbox.grid(row=11, column=0, padx=8, pady=(4, 8), sticky="nsew")
 
     # ══════════════════════════════════════
     #  CONFIG — panel lateral derecho
@@ -291,7 +332,7 @@ class HMIApp(ctk.CTk):
         header.grid(row=0, column=0, sticky="ew", padx=10, pady=(8, 0))
         header.grid_columnconfigure(0, weight=1)
 
-        ctk.CTkLabel(header, text="CONFIGURACION",
+        ctk.CTkLabel(header, text="CONFIGURACION PLC",
                      font=ctk.CTkFont(size=10, weight="bold"),
                      text_color=TEXT_LO).grid(row=0, column=0, sticky="w")
 
@@ -303,78 +344,37 @@ class HMIApp(ctk.CTk):
             command=self._toggle_config,
         ).grid(row=0, column=1)
 
-        # ── MODELO ──
-        ctk.CTkLabel(self.config_frame, text="MODELO",
+        # ── CONEXION PLC ──
+        ctk.CTkLabel(self.config_frame, text="CONEXION PLC",
                      font=ctk.CTkFont(size=9, weight="bold"),
                      text_color=TEXT_DIM).grid(
             row=1, column=0, padx=10, pady=(8, 4), sticky="w")
 
-        model_choices = list(self.modelos.keys()) if self.modelos else ["(sin modelos)"]
-        self.dd_modelo = ctk.CTkOptionMenu(
-            self.config_frame, values=model_choices,
-            font=ctk.CTkFont(size=10), height=26,
-            fg_color=BG_INSET, button_color=BORDER,
-            button_hover_color=BORDER_HI,
-            dropdown_fg_color=BG_RAISED, dropdown_hover_color=BG_SURFACE,
-            text_color=TEXT,
-        )
-        self.dd_modelo.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 4))
-
-        btn_modelo_row = ctk.CTkFrame(self.config_frame, fg_color="transparent")
-        btn_modelo_row.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 8))
-        btn_modelo_row.grid_columnconfigure(0, weight=1)
-
-        self.btn_cargar = ctk.CTkButton(
-            btn_modelo_row, text="Cargar", height=28,
-            font=ctk.CTkFont(size=11),
-            fg_color=BG_INSET, hover_color=BORDER,
-            text_color=TEXT, corner_radius=3,
-            command=self._cargar_modelo,
-        )
-        self.btn_cargar.grid(row=0, column=0, sticky="ew", padx=(0, 3))
-
-        self.btn_buscar = ctk.CTkButton(
-            btn_modelo_row, text="Buscar...", height=28, width=80,
-            font=ctk.CTkFont(size=11),
-            fg_color="transparent", hover_color=BG_INSET,
-            text_color=TEXT_LO, corner_radius=3,
-            border_width=1, border_color=BORDER,
-            command=self._buscar_modelo,
-        )
-        self.btn_buscar.grid(row=0, column=1)
-
-        # ── CONEXION PLC ──
-        self._config_sep(4)
-        ctk.CTkLabel(self.config_frame, text="CONEXION PLC",
-                     font=ctk.CTkFont(size=9, weight="bold"),
-                     text_color=TEXT_DIM).grid(
-            row=5, column=0, padx=10, pady=(8, 4), sticky="w")
-
         # AMS
         ctk.CTkLabel(self.config_frame, text="AMS Net ID",
                      font=ctk.CTkFont(size=9), text_color=TEXT_LO).grid(
-            row=6, column=0, padx=10, pady=(0, 1), sticky="w")
+            row=2, column=0, padx=10, pady=(0, 1), sticky="w")
         self.inp_ams = ctk.CTkEntry(
             self.config_frame, font=ctk.CTkFont(size=11), height=26,
             fg_color=BG_INSET, border_color=BORDER, text_color=TEXT,
         )
         self.inp_ams.insert(0, PLC_DEFAULTS["ams_net_id"])
-        self.inp_ams.grid(row=7, column=0, sticky="ew", padx=10, pady=(0, 4))
+        self.inp_ams.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 4))
 
         # Puerto
         ctk.CTkLabel(self.config_frame, text="Puerto",
                      font=ctk.CTkFont(size=9), text_color=TEXT_LO).grid(
-            row=8, column=0, padx=10, pady=(0, 1), sticky="w")
+            row=4, column=0, padx=10, pady=(0, 1), sticky="w")
         self.inp_port = ctk.CTkEntry(
             self.config_frame, font=ctk.CTkFont(size=11), height=26,
             fg_color=BG_INSET, border_color=BORDER, text_color=TEXT,
         )
         self.inp_port.insert(0, str(PLC_DEFAULTS["port"]))
-        self.inp_port.grid(row=9, column=0, sticky="ew", padx=10, pady=(0, 6))
+        self.inp_port.grid(row=5, column=0, sticky="ew", padx=10, pady=(0, 6))
 
         # Botones PLC
         btn_row = ctk.CTkFrame(self.config_frame, fg_color="transparent")
-        btn_row.grid(row=10, column=0, padx=10, pady=(0, 8), sticky="ew")
+        btn_row.grid(row=6, column=0, padx=10, pady=(0, 8), sticky="ew")
         btn_row.grid_columnconfigure((0, 1), weight=1)
 
         self.btn_conectar = ctk.CTkButton(
@@ -396,41 +396,41 @@ class HMIApp(ctk.CTk):
         self.btn_desconectar.grid(row=0, column=1, sticky="ew", padx=(3, 0))
 
         # ── VARIABLES PLC ──
-        self._config_sep(11)
+        self._config_sep(7)
         ctk.CTkLabel(self.config_frame, text="VARIABLES PLC",
                      font=ctk.CTkFont(size=9, weight="bold"),
                      text_color=TEXT_DIM).grid(
-            row=12, column=0, padx=10, pady=(8, 4), sticky="w")
+            row=8, column=0, padx=10, pady=(8, 4), sticky="w")
 
         ctk.CTkLabel(self.config_frame, text="Variable clase (INT)",
                      font=ctk.CTkFont(size=9), text_color=TEXT_LO).grid(
-            row=13, column=0, padx=10, pady=(0, 1), sticky="w")
+            row=9, column=0, padx=10, pady=(0, 1), sticky="w")
         self.inp_var_clase = ctk.CTkEntry(
             self.config_frame,
             font=ctk.CTkFont(family="Courier", size=10),
             height=24, fg_color=BG_INSET, border_color=BORDER, text_color=TEXT,
         )
         self.inp_var_clase.insert(0, PLC_DEFAULTS["var_clase"])
-        self.inp_var_clase.grid(row=14, column=0, sticky="ew", padx=10, pady=(0, 4))
+        self.inp_var_clase.grid(row=10, column=0, sticky="ew", padx=10, pady=(0, 4))
 
         ctk.CTkLabel(self.config_frame, text="Variable confianza (REAL)",
                      font=ctk.CTkFont(size=9), text_color=TEXT_LO).grid(
-            row=15, column=0, padx=10, pady=(0, 1), sticky="w")
+            row=11, column=0, padx=10, pady=(0, 1), sticky="w")
         self.inp_var_conf = ctk.CTkEntry(
             self.config_frame,
             font=ctk.CTkFont(family="Courier", size=10),
             height=24, fg_color=BG_INSET, border_color=BORDER, text_color=TEXT,
         )
         self.inp_var_conf.insert(0, PLC_DEFAULTS["var_confianza"])
-        self.inp_var_conf.grid(row=16, column=0, sticky="ew", padx=10, pady=(0, 6))
+        self.inp_var_conf.grid(row=12, column=0, sticky="ew", padx=10, pady=(0, 6))
 
         # Threshold
         ctk.CTkLabel(self.config_frame, text="Umbral de confianza",
                      font=ctk.CTkFont(size=9), text_color=TEXT_LO).grid(
-            row=17, column=0, padx=10, pady=(0, 1), sticky="w")
+            row=13, column=0, padx=10, pady=(0, 1), sticky="w")
 
         thresh_row = ctk.CTkFrame(self.config_frame, fg_color="transparent")
-        thresh_row.grid(row=18, column=0, sticky="ew", padx=10, pady=(0, 8))
+        thresh_row.grid(row=14, column=0, sticky="ew", padx=10, pady=(0, 8))
         thresh_row.grid_columnconfigure(0, weight=1)
 
         self.slider_threshold = ctk.CTkSlider(
@@ -450,11 +450,11 @@ class HMIApp(ctk.CTk):
         self.lbl_threshold.grid(row=0, column=1)
 
         # ── SNIPPET CODIGO PLC ──
-        self._config_sep(19)
+        self._config_sep(15)
         ctk.CTkLabel(self.config_frame, text="CODIGO PLC (pyads)",
                      font=ctk.CTkFont(size=9, weight="bold"),
                      text_color=TEXT_DIM).grid(
-            row=20, column=0, padx=10, pady=(8, 2), sticky="w")
+            row=16, column=0, padx=10, pady=(8, 2), sticky="w")
 
         self.snippet_textbox = ctk.CTkTextbox(
             self.config_frame, height=130,
@@ -463,7 +463,7 @@ class HMIApp(ctk.CTk):
             corner_radius=3, border_width=1, border_color=BORDER,
             state="disabled",
         )
-        self.snippet_textbox.grid(row=21, column=0, padx=10, pady=(0, 12),
+        self.snippet_textbox.grid(row=17, column=0, padx=10, pady=(0, 12),
                                   sticky="ew")
         self._update_snippet()
 
@@ -743,7 +743,7 @@ class HMIApp(ctk.CTk):
                                              border_color=BORDER_HI)
             self._slide_config_in()
         else:
-            self.btn_config_toggle.configure(text="Configuracion",
+            self.btn_config_toggle.configure(text="Config PLC",
                                              border_color=BORDER)
             self._slide_config_out()
 
@@ -775,7 +775,7 @@ class HMIApp(ctk.CTk):
             if hide_after:
                 self.config_outer.place_forget()
                 self.config_visible = False
-                self.btn_config_toggle.configure(text="Configuracion",
+                self.btn_config_toggle.configure(text="Config PLC",
                                                  border_color=BORDER)
             return
         t = step / steps
