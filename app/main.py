@@ -6,7 +6,7 @@ Entry point: python -m app.main
 
 import gradio as gr
 
-from app.ui import tab_datos, tab_probar
+from app.ui import tab_datos, tab_probar, tab_hmi
 
 CSS = """
 footer { display: none !important; }
@@ -188,6 +188,8 @@ def create_app():
                 tab_datos.create()
             with gr.Tab("2. Probar"):
                 tab_probar.create()
+            with gr.Tab("3. HMI"):
+                tab_hmi.create()
 
     return app
 

@@ -24,3 +24,14 @@ state = {
     "preprocessing": "rescale",  # 'rescale' (CNN custom) | 'mobilenet' (MobileNetV2)
     "model_type": "",
 }
+
+# ── Configuración PLC (Beckhoff / pyads) ──
+PLC_DEFAULTS = {
+    "ams_net_id": "5.80.201.232.1.1",
+    "port": 851,
+    "var_inicio": "GVL.bInicioControlDeCalidad",
+    "var_clase": "GVL.nResultadoClase",
+    "var_confianza": "GVL.rConfianza",
+    "captures_per_inspection": 5,
+    "confidence_threshold": 0.6,
+}
