@@ -116,13 +116,13 @@ class HMIApp(ctk.CTk):
     def _build_topbar(self):
         self.topbar = ctk.CTkFrame(self, height=34, corner_radius=0,
                                    fg_color=BG_SURFACE)
-        self.topbar.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.topbar.grid(row=0, column=0, sticky="ew")
         self.topbar.grid_columnconfigure(1, weight=1)
         self.topbar.grid_propagate(False)
 
         # Línea de acento superior
         accent = ctk.CTkFrame(self, height=2, corner_radius=0, fg_color=ACCENT)
-        accent.grid(row=0, column=0, columnspan=2, sticky="new")
+        accent.grid(row=0, column=0, sticky="new")
         accent.lift()
 
         # Live dot
@@ -265,18 +265,17 @@ class HMIApp(ctk.CTk):
     # ══════════════════════════════════════
 
     def _build_config_panel(self):
-        """Panel de configuración lateral (columna 1 de root, al lado de main)."""
+        """Panel de configuración lateral (overlay con place, no afecta grid)."""
+        # Contenedor opaco que se posiciona con place (no grid)
+        self.config_outer = ctk.CTkFrame(self, fg_color=BG, corner_radius=0)
         self.config_frame = ctk.CTkScrollableFrame(
-            self, fg_color=BG_SURFACE, corner_radius=4,
+            self.config_outer, fg_color=BG_SURFACE, corner_radius=4,
             border_width=1, border_color=BORDER,
-            width=CONFIG_WIDTH,
         )
-        # Se coloca en row=1, column=1 (al lado de main_frame)
-        self.config_frame.grid(row=1, column=1, sticky="nsew",
-                               padx=(0, 6), pady=(3, 6))
+        self.config_frame.pack(fill="both", expand=True, padx=(3, 6), pady=(3, 6))
         self.config_frame.grid_columnconfigure(0, weight=1)
-        # Empieza oculto
-        self.config_frame.grid_remove()
+        # Empieza oculto — no place() aún
+        self._config_target_x = 1.0  # 1.0 = offscreen right
 
         # ── MODELO ──
         ctk.CTkLabel(self.config_frame, text="MODELO",
@@ -707,13 +706,47 @@ class HMIApp(ctk.CTk):
     def _toggle_config(self):
         self.config_visible = not self.config_visible
         if self.config_visible:
-            self.config_frame.grid()
             self.btn_config_toggle.configure(text="Ocultar",
                                              border_color=BORDER_HI)
+            self._slide_config_in()
         else:
-            self.config_frame.grid_remove()
             self.btn_config_toggle.configure(text="Configuracion",
                                              border_color=BORDER)
+            self._slide_config_out()
+
+    def _slide_config_in(self):
+        """Desliza el panel config desde la derecha (overlay, no mueve nada)."""
+        w_frac = CONFIG_WIDTH / max(self.winfo_width(), 1)
+        # anchor="ne" → relx es donde queda la esquina superior-derecha
+        # relx=1.0+w_frac = offscreen,  relx=1.0 = visible pegado a la derecha
+        start = 1.0 + w_frac  # fuera de pantalla
+        end = 1.0             # visible
+        self.config_outer.place(relx=start, rely=0, relheight=1.0,
+                                relwidth=w_frac, anchor="ne")
+        self.config_outer.lift()
+        self._animate_config(start, end, steps=10)
+
+    def _slide_config_out(self):
+        """Desliza el panel config hacia la derecha y lo oculta."""
+        w_frac = CONFIG_WIDTH / max(self.winfo_width(), 1)
+        start = 1.0
+        end = 1.0 + w_frac
+        self._animate_config(start, end, steps=10, hide_after=True)
+
+    def _animate_config(self, start, end, steps=10, step=0, hide_after=False):
+        """Animación suave del panel lateral (ease-out)."""
+        if step > steps:
+            if hide_after:
+                self.config_outer.place_forget()
+            return
+        t = step / steps
+        ease = 1.0 - (1.0 - t) ** 3  # cubic ease-out
+        relx = start + (end - start) * ease
+        w_frac = CONFIG_WIDTH / max(self.winfo_width(), 1)
+        self.config_outer.place(relx=relx, rely=0, relheight=1.0,
+                                relwidth=w_frac, anchor="ne")
+        self.after(16, lambda: self._animate_config(
+            start, end, steps, step + 1, hide_after))
 
     def _on_threshold_change(self, value):
         self.threshold = float(value)
