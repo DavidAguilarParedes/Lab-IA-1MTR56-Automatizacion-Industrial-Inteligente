@@ -54,7 +54,7 @@ Abrir cualquier archivo `.ipynb` en VS Code y ejecutar las celdas.
 
 - `labs/` — Laboratorios guiados (seguir instrucciones del profesor)
 - `proyecto/entrenar.ipynb` — Entrenar su propio modelo
-- `proyecto/probador.ipynb` — Probar modelo interactivamente
+- `proyecto/probar_modelo.ipynb` — Probar modelo interactivamente
 
 ### HMI Industrial (Control de Calidad + PLC)
 
