@@ -1,7 +1,8 @@
 """
 PUCP — Sistema de Clasificación Industrial
 
-Entry point: python -m app.main
+Entry point Gradio (desarrollo): python -m app.main
+Entry point producción (standalone): python -m app.hmi
 """
 
 import gradio as gr
@@ -137,6 +138,88 @@ footer { display: none !important; }
     font-size: 0.9rem;
     background: #fce8e6;
     border-radius: 8px;
+}
+
+/* ══════════════════════════════════
+   HMI Industrial
+   ══════════════════════════════════ */
+
+.hmi-sidebar {
+    background: #1a1a2e !important;
+    border-radius: 12px !important;
+    padding: 1.5rem 1rem !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 400px;
+}
+
+.hmi-panel {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.hmi-clase {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+}
+
+.hmi-conf-track {
+    width: 100%;
+    height: 28px;
+    background: #2a2a4a;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.hmi-conf-fill {
+    height: 100%;
+    border-radius: 8px;
+    transition: width 0.4s ease, background 0.3s ease;
+    min-width: 2px;
+}
+
+.hmi-conf-text {
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin-top: 0.3rem;
+}
+
+.hmi-status {
+    text-align: center;
+    padding: 0.8rem;
+    color: #ccc;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.hmi-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+.hmi-dot-ok {
+    background: #4caf50;
+    box-shadow: 0 0 6px #4caf50;
+}
+.hmi-dot-off {
+    background: #666;
+}
+
+.hmi-btn-forzar {
+    margin-top: 0.5rem !important;
+    min-height: 56px !important;
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
 }
 
 /* Indicador LIVE */
