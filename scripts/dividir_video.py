@@ -118,20 +118,51 @@ def video_to_frames(video_path, output_folder, clase, interval_seconds=0.5,
 
 
 # ==========================
-# CONFIGURACIÓN
+# CLI
 # ==========================
 
-clase = "amarillo"  # < NOMBRE DE LA CLASE >
+if __name__ == "__main__":
+    import argparse
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
-video_path = os.path.join(base_dir, f"{clase}.mp4")
-output_folder = os.path.join(base_dir, "..", "data", "tapitas", clase)
+    parser = argparse.ArgumentParser(
+        description="Extrae frames de un video para crear dataset de entrenamiento."
+    )
+    parser.add_argument(
+        "clase", help="Nombre de la clase (ej: amarillo, rojo)"
+    )
+    parser.add_argument(
+        "--video", default=None,
+        help="Ruta al video .mp4 (default: <clase>.mp4 en el directorio del script)"
+    )
+    parser.add_argument(
+        "--salida", default=None,
+        help="Directorio de salida (default: ../data/tapitas/<clase>)"
+    )
+    parser.add_argument(
+        "--intervalo", type=float, default=0.5,
+        help="Segundos entre frames (default: 0.5)"
+    )
+    parser.add_argument(
+        "--nitidez", type=float, default=50.0,
+        help="Umbral de nitidez mínima (default: 50.0)"
+    )
+    parser.add_argument(
+        "--sin-estabilidad", action="store_true",
+        help="Desactivar detección de estabilidad"
+    )
+    args = parser.parse_args()
 
-video_to_frames(
-    video_path,
-    output_folder,
-    clase,
-    interval_seconds=0.5,     # Segundos entre frames (0.5 = 2 frames/segundo)
-    min_sharpness=50.0,        # Descarta frames borrosos (subir si hay muchos borrosos)
-    detect_stability=True      # Solo captura cuando la escena está quieta
-)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    video_path = args.video or os.path.join(base_dir, f"{args.clase}.mp4")
+    output_folder = args.salida or os.path.join(
+        base_dir, "..", "data", "tapitas", args.clase
+    )
+
+    video_to_frames(
+        video_path,
+        output_folder,
+        args.clase,
+        interval_seconds=args.intervalo,
+        min_sharpness=args.nitidez,
+        detect_stability=not args.sin_estabilidad,
+    )

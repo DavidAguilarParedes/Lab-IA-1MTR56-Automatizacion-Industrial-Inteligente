@@ -75,6 +75,14 @@ try:
     if expected_size != IMG_SIZE:
         print(f"  ⚠ El modelo espera {expected_size}x{expected_size} pero IMG_SIZE={IMG_SIZE}")
         print(f"    Ajuste IMG_SIZE = {expected_size}")
+
+    # Detectar tipo de preprocesamiento
+    PREPROCESSING = "rescale"
+    for layer in model.layers:
+        if "mobilenet" in layer.name.lower():
+            PREPROCESSING = "mobilenet"
+            break
+    print(f"  Preprocesamiento: {PREPROCESSING}")
 except Exception as e:
     print(f"Error al cargar el modelo: {e}")
     exit(1)
@@ -114,7 +122,13 @@ try:
 
         # Preprocesar (misma lógica que en el notebook)
         img = cv2.resize(frame, (IMG_SIZE, IMG_SIZE))
-        img_normalized = img / 255.0
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # OpenCV usa BGR, el modelo espera RGB
+        img = img.astype("float32")
+        if PREPROCESSING == "mobilenet":
+            from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+            img_normalized = preprocess_input(img)
+        else:
+            img_normalized = img / 255.0
         img_input = np.expand_dims(img_normalized, axis=0)
 
         # Predecir
@@ -123,49 +137,71 @@ try:
         confidence = preds[pred_class]
         class_name = CLASS_NAMES[pred_class]
 
-        # --- Visualización ---
+        # --- Visualización con UI ---
         h_frame, w_frame = frame.shape[:2]
+        color = COLORES[pred_class % len(COLORES)]
 
-        # Resultado principal
+        # Barra superior semitransparente
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (0, 0), (w_frame, 60), (30, 30, 30), -1)
+        cv2.addWeighted(overlay, 0.85, frame, 0.15, 0, frame)
+
         if confidence >= CONFIDENCE_THRESHOLD:
-            color = COLORES[pred_class % len(COLORES)]
-            text = f"{class_name}: {confidence*100:.1f}%"
+            label = f"{class_name}  {confidence*100:.0f}%"
+            cv2.rectangle(frame, (0, 0), (6, 60), color, -1)
         else:
+            label = f"?  {confidence*100:.0f}%"
             color = (128, 128, 128)
-            text = f"Incierto ({confidence*100:.1f}%)"
+            cv2.rectangle(frame, (0, 0), (6, 60), color, -1)
 
-        cv2.rectangle(frame, (5, 5), (380, 45), (0, 0, 0), -1)
-        cv2.putText(frame, text, (10, 35),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+        cv2.putText(frame, label, (16, 42),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 2, cv2.LINE_AA)
+        cv2.putText(frame, f"{fps:.0f} FPS", (w_frame - 90, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 180), 1, cv2.LINE_AA)
 
-        # FPS
-        cv2.putText(frame, f"FPS: {fps:.0f}", (w_frame - 100, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-
-        # Barras de confianza (diagnóstico)
+        # Panel lateral de confianza
         if show_diag:
-            bar_x = 10
-            bar_y = 55
-            bar_w = 200
-            bar_h = 22
+            panel_w = 220
+            panel_h = 30 + len(CLASS_NAMES) * 36
+            panel_x = w_frame - panel_w - 10
+            panel_y = 70
 
+            overlay2 = frame.copy()
+            cv2.rectangle(overlay2, (panel_x, panel_y),
+                          (panel_x + panel_w, panel_y + panel_h),
+                          (20, 20, 20), -1)
+            cv2.addWeighted(overlay2, 0.8, frame, 0.2, 0, frame)
+
+            cv2.putText(frame, "Confianza", (panel_x + 10, panel_y + 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (180, 180, 180), 1, cv2.LINE_AA)
+
+            bar_w = panel_w - 20
             for i, (name, prob) in enumerate(zip(CLASS_NAMES, preds)):
-                y = bar_y + i * (bar_h + 4)
-                # Fondo
-                cv2.rectangle(frame, (bar_x, y),
-                              (bar_x + bar_w, y + bar_h), (40, 40, 40), -1)
-                # Barra
-                w = int(bar_w * prob)
-                c = COLORES[i % len(COLORES)] if i == pred_class else (80, 80, 80)
-                cv2.rectangle(frame, (bar_x, y),
-                              (bar_x + w, y + bar_h), c, -1)
-                # Texto
-                cv2.putText(frame, f"{name}: {prob*100:.0f}%",
-                            (bar_x + 5, y + 16),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
+                y = panel_y + 32 + i * 36
+                cv2.putText(frame, name, (panel_x + 10, y + 2),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.4,
+                            (220, 220, 220) if i == pred_class else (140, 140, 140),
+                            1, cv2.LINE_AA)
+                bar_y = y + 8
+                cv2.rectangle(frame, (panel_x + 10, bar_y),
+                              (panel_x + 10 + bar_w, bar_y + 14), (60, 60, 60), -1)
+                fill_w = max(2, int(bar_w * prob))
+                bc = COLORES[i % len(COLORES)] if i == pred_class else (100, 100, 100)
+                cv2.rectangle(frame, (panel_x + 10, bar_y),
+                              (panel_x + 10 + fill_w, bar_y + 14), bc, -1)
+                cv2.putText(frame, f"{prob*100:.0f}%",
+                            (panel_x + 10 + bar_w + 2, bar_y + 12),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.35, (180, 180, 180), 1, cv2.LINE_AA)
 
-        # Mostrar
-        cv2.imshow('Clasificacion en Tiempo Real', frame)
+        # Barra inferior de controles
+        overlay3 = frame.copy()
+        cv2.rectangle(overlay3, (0, h_frame - 30), (w_frame, h_frame), (30, 30, 30), -1)
+        cv2.addWeighted(overlay3, 0.7, frame, 0.3, 0, frame)
+        cv2.putText(frame, "Q salir  |  S captura  |  D panel",
+                    (10, h_frame - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
+                    (140, 140, 140), 1, cv2.LINE_AA)
+
+        cv2.imshow('PUCP - Clasificacion en Tiempo Real', frame)
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):

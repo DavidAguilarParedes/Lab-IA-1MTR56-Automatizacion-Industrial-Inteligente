@@ -6,16 +6,31 @@ Laboratorio de clasificación de imágenes con Redes Neuronales Convolucionales 
 
 ```
 pucp/
-├── labs/                                # Notebooks de laboratorio
-│   ├── lab1_cnn_basica.ipynb            # CNN básica (botellas glass/plastic)
-│   ├── lab2_data_augmentation.ipynb     # Data augmentation
-│   ├── lab3_clasificacion_tapitas.ipynb # Proyecto: clasificación de tapitas
-│   └── probador.ipynb                   # Teachable Machine: entrenar/probar modelos
+├── app/                                # Aplicación web Gradio (2 tabs)
+│   ├── main.py                         # Entry point: python -m app.main
+│   ├── config.py                       # Constantes y estado compartido
+│   ├── datos.py                        # Utilidades de dataset
+│   ├── modelo.py                       # MobileNetV2 + CNN custom
+│   ├── plc.py                          # Cliente OPC UA (para scripts)
+│   └── ui/                             # Tabs de la interfaz
+│       ├── tab_datos.py                # Tab 1: Crear/cargar dataset
+│       └── tab_probar.py               # Tab 2: Probar predicciones
+│
+├── labs/                                # Notebooks de laboratorio (guiados)
+│   ├── lab1_cnn_basica.ipynb            # Lab 1: CNN básica (botellas)
+│   ├── lab2_data_augmentation.ipynb     # Lab 2: Data augmentation
+│   └── lab3_clasificacion_tapitas.ipynb # Lab 3: Clasificación de tapitas
+│
+├── proyecto/                            # Notebooks para el proyecto del alumno
+│   ├── entrenar.ipynb                   # Entrenar CNN/MobileNetV2 (código visible)
+│   └── probador.ipynb                   # Teachable Machine interactivo
 │
 ├── scripts/                             # Scripts de soporte
 │   ├── capturar_clases.py               # Captura imágenes por clase desde cámara
 │   ├── dividir_video.py                 # Extrae frames de video para dataset
-│   └── prueba_video.py                  # Prueba el modelo con cámara en vivo
+│   ├── prueba_video.py                  # Prueba el modelo con cámara en vivo
+│   ├── inferencia_plc.py                # Plantilla: inferencia + comunicación PLC
+│   └── simular_plc.py                   # Simulador OPC UA para pruebas
 │
 ├── data/                                # Datasets
 │   ├── botellas/                        # Dataset pre-cargado (labs 1-2)
@@ -53,20 +68,64 @@ source .venv/bin/activate    # Linux/Mac
 pip install -r requirements.txt
 ```
 
-## Flujo de trabajo
+## Labs (guiados por el profesor)
 
-### Labs 1 y 2 (enseñanza)
-1. Abra `labs/lab1_cnn_basica.ipynb` en Jupyter
-2. Ejecute las celdas para aprender CNN básica
-3. Luego abra `labs/lab2_data_augmentation.ipynb` para aprender Data Augmentation
+Notebooks con instrucciones paso a paso. Abrir en Jupyter y seguir las celdas:
 
-### Lab 3 (proyecto de tapitas)
-1. Grabe videos de tapitas en la **zona de inspección** con el celular fijo
-2. Ejecute `scripts/dividir_video.py` para extraer frames al directorio `data/tapitas/`
-3. Abra `labs/lab3_clasificacion_tapitas.ipynb` y siga las instrucciones
-4. Exporte el modelo entrenado (.h5)
-5. Abra `labs/probador.ipynb` para entrenar/probar modelos interactivamente (estilo Teachable Machine)
-6. Configure y ejecute `scripts/prueba_video.py` para probar en tiempo real
+1. `labs/lab1_cnn_basica.ipynb` — CNN básica con botellas glass/plastic
+2. `labs/lab2_data_augmentation.ipynb` — Técnicas de Data Augmentation
+3. `labs/lab3_clasificacion_tapitas.ipynb` — Proyecto de tapitas
+
+```bash
+uv run jupyter notebook labs/
+```
+
+## Proyecto del alumno
+
+Flujo completo: capturar dataset, entrenar modelo, probar, integrar con PLC.
+
+### 1. Capturar dataset
+
+```bash
+# Opción A: App web (Tab 1 — Datos)
+uv run python -m app.main
+# Se abre en http://localhost:7860
+
+# Opción B: Script CLI
+python scripts/capturar_clases.py rojo azul verde --tiempo 15
+```
+
+### 2. Entrenar modelo
+
+Abra `proyecto/entrenar.ipynb` en Jupyter y ejecute celda por celda.
+El alumno **ve y modifica** todo el código: data augmentation, arquitectura
+(CNN custom o MobileNetV2 con transfer learning), hiperparámetros, evaluación.
+
+```bash
+uv run jupyter notebook proyecto/entrenar.ipynb
+```
+
+### 3. Probar modelo
+
+```bash
+# Opción A: App web (Tab 2 — Probar)
+uv run python -m app.main
+
+# Opción B: Cámara en vivo
+python scripts/prueba_video.py  # completar configuración al inicio
+```
+
+### 4. Integración PLC
+
+Edite `scripts/inferencia_plc.py` — el alumno escribe su propia lógica de
+comunicación con el PLC (los TODOs indican dónde). El código de inferencia
+(cargar modelo, predecir) ya está implementado.
+
+```bash
+# Probar con simulador:
+uv run python scripts/simular_plc.py    # terminal 1
+python scripts/inferencia_plc.py         # terminal 2
+```
 
 ## Uso de Jupyter
 
@@ -78,4 +137,18 @@ uv run jupyter notebook
 jupyter notebook
 ```
 
-Luego navegue a la carpeta `labs/` y abra el notebook deseado.
+## Scripts CLI
+
+```bash
+# Extraer frames de video
+python scripts/dividir_video.py amarillo --video ruta/video.mp4 --salida data/tapitas/amarillo
+
+# Capturar imágenes con cámara
+python scripts/capturar_clases.py rojo azul verde --tiempo 15
+
+# Prueba en vivo con modelo
+python scripts/prueba_video.py  # completar configuración al inicio
+
+# Inferencia + PLC (plantilla)
+python scripts/inferencia_plc.py  # completar TODOs
+```
