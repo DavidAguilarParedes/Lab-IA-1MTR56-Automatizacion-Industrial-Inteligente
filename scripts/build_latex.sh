@@ -36,6 +36,7 @@ declare -A DOCUMENTS=(
     [guia1]="guia1.tex"
     [guia2]="guia2.tex"
     [fe_lab]="fe_lab.tex"
+    [guia_lab]="guia_laboratorio.tex"
 )
 
 # Verificar si las figuras matplotlib están presentes
@@ -62,7 +63,7 @@ build_one() {
 
     # Verificar dependencias específicas por documento
     case "$key" in
-        guia1) verificar_figuras_g1 ;;
+        guia1|guia_lab) verificar_figuras_g1 ;;
     esac
 
     local base="${src%.tex}"
