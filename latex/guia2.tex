@@ -1,0 +1,669 @@
+% =============================================================================
+% Guía 2 — Transfer Learning + Tapitas + Beckhoff
+% PUCP · Ing. Mecatrónica · 1MTR56 — Automatización Industrial Inteligente B
+% =============================================================================
+\input{plantilla_pucp.tex}
+
+\begin{document}
+
+% =============================================================================
+% PORTADA
+% =============================================================================
+\portadapucp{10}{TRANSFER LEARNING APLICADO --- CONTROL DE CALIDAD INDUSTRIAL}
+
+% =============================================================================
+% TABLA DE CONTENIDO
+% =============================================================================
+\indicepucp
+\thispagestyle{fancy}
+\newpage
+
+% =============================================================================
+\section{Introducción}
+
+Esta guía constituye la \textbf{segunda parte} del laboratorio combinado
+de Inteligencia Artificial y Visión por Computadora. Su componente es
+sumativo (70\,\% de la nota total del laboratorio).
+
+Partiendo de los fundamentos teóricos desarrollados en la Guía 1
+(arquitectura de las CNN, proceso de entrenamiento, preprocesamiento y
+aprendizaje por transferencia), en esta guía se construirá un
+\textbf{sistema completo de control de calidad por visión por
+computadora}: una pareja de estudiantes capturará su propio dataset de
+tapitas de tres colores, entrenará un modelo basado en MobileNetV2
+mediante aprendizaje por transferencia, e integrará el modelo
+entrenado con un computador industrial Beckhoff vía el protocolo ADS
+para disparar la acción de un brazo robótico colaborativo.
+
+\textbf{Objetivos del laboratorio:}
+\begin{itemize}
+  \item Construir y curar un dataset de imágenes industriales propio.
+  \item Entrenar un modelo de clasificación mediante \emph{transfer learning} con MobileNetV2.
+  \item Aplicar \emph{feature extraction} y \emph{fine-tuning} como estrategias de adaptación al dominio.
+  \item Comunicar un programa Python con un controlador Beckhoff mediante el protocolo ADS y la librería \texttt{pyads}.
+  \item Integrar el clasificador con la lógica de control del IPC Beckhoff para producir un sistema de inspección automatizada.
+  \item Comprender el rol de la inteligencia artificial y los robots colaborativos en el paradigma de Industria 5.0.
+\end{itemize}
+
+\textbf{Conocimientos previos requeridos (de la Guía 1):}
+\begin{itemize}
+  \item Arquitectura de una red neuronal convolucional.
+  \item Proceso de entrenamiento y evaluación de modelos.
+  \item Concepto de aprendizaje por transferencia y MobileNetV2.
+  \item Preprocesamiento, aumentación de datos y regularización.
+\end{itemize}
+
+\textbf{Materiales:}
+\begin{itemize}
+  \item Computadora con Python 3.10 o superior y entorno virtual del laboratorio activo.
+  \item Cámara web USB o cámara IP (o cámara del teléfono móvil de los integrantes).
+  \item Tapitas de plástico de tres colores: \textbf{rojo}, \textbf{azul} y \textbf{amarillo}.
+  \item Computador industrial Beckhoff con TwinCAT 3.
+  \item Brazo robótico colaborativo del laboratorio.
+  \item Librerías \texttt{tensorflow}, \texttt{opencv-python}, \texttt{pyads}, \texttt{numpy}, \texttt{matplotlib}.
+\end{itemize}
+
+\paragraph{Recapitulación del pipeline.}
+La Figura~\ref{fig:pipeline2} reproduce el flujo end-to-end del sistema.
+La presente guía cubre las etapas \emph{Modelo CNN}, \emph{Predicción}
+y \emph{3 BOOLs ADS}, y su integración con la salida digital del IPC
+Beckhoff que dispara el ciclo del brazo robótico.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=7mm and 7mm]
+  \node[pucpbox]                      (cam)  {Cámara\\\footnotesize USB / IP};
+  \node[pucpboxfilled, right=of cam]  (cnn)  {Modelo CNN\\\footnotesize MobileNetV2};
+  \node[pucpbox, right=of cnn]        (pred) {Predicción\\\footnotesize R / A / Y};
+  \node[pucpboxfilled, right=of pred] (ads)  {3 BOOLs ADS\\\footnotesize bR · bA · bY};
+  \node[pucpbox, right=of ads]        (plc)  {IPC Beckhoff\\\footnotesize $\rightarrow$ brazo};
+  \draw[pucparrow] (cam)  -- (cnn);
+  \draw[pucparrow] (cnn)  -- (pred);
+  \draw[pucparrow] (pred) -- (ads);
+  \draw[pucparrow] (ads)  -- (plc);
+\end{tikzpicture}
+\caption{Pipeline end-to-end del laboratorio combinado. En la Guía 2 se construyen, integran y ponen en operación todos los bloques.}
+\label{fig:pipeline2}
+\end{figure}
+
+% =============================================================================
+\section{Industria 5.0 y robots colaborativos}
+
+\subsection{Del paradigma 4.0 al 5.0}
+
+La automatización industrial ha atravesado distintas etapas de
+transformación. Desde la mecanización con la máquina de vapor
+(Industria 1.0), pasando por la electricidad y la producción en masa
+(2.0), la automatización con electrónica e informática (3.0), hasta
+la actual Industria 4.0 que integra de manera intensiva el Internet
+de las Cosas (IoT), la robótica avanzada, la computación en la nube y
+la inteligencia artificial.
+
+La emergente \textbf{Industria 5.0} introduce una nueva dimensión: ya
+no se busca únicamente mejorar la productividad, sino integrar
+valores humanos, éticos y sostenibles en el entorno industrial. En
+lugar de reemplazar al operario, la Industria 5.0 propone una
+\emph{colaboración estrecha entre humanos y máquinas}, donde cada uno
+aporta lo que mejor sabe hacer. La inteligencia artificial juega un
+papel central: no solo automatiza tareas, sino que se convierte en
+una herramienta que potencia las capacidades humanas mediante
+asistencia en la toma de decisiones, personalización de productos y
+anticipación de fallos.
+
+\subsection{Robots colaborativos (cobots)}
+
+Los \textbf{robots colaborativos} (o \emph{cobots}) son la
+materialización tecnológica del paradigma 5.0. A diferencia de los
+robots industriales tradicionales --- confinados a celdas cerradas por
+razones de seguridad ---, los cobots están diseñados para trabajar
+junto a los operarios en el mismo entorno físico, compartiendo tareas,
+aprendiendo patrones de comportamiento y adaptándose a las decisiones
+humanas en tiempo real (Figura~\ref{fig:cobot}).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.55\textwidth]{../docs/assets/g2/cobot_workspace.jpg}
+\caption{Espacio de trabajo del laboratorio. Un brazo robótico colaborativo opera sobre una superficie con tapitas de colores que deben ser clasificadas y manipuladas. Fuente: elaboración propia.}
+\label{fig:cobot}
+\end{figure}
+
+\subsection{Normativa de seguridad: ISO/TS 15066}
+
+La integración de cobots en entornos donde interactúan con seres
+humanos exige el cumplimiento de normativas específicas. Aunque la
+Industria 5.0 aún no está formalmente normada por organismos
+internacionales, las tecnologías que la habilitan ya están sujetas a
+estándares establecidos. Las normas \textbf{ISO 10218-1} e
+\textbf{ISO 10218-2} establecen los requisitos para el diseño y la
+integración segura de robots industriales. La especificación técnica
+\textbf{ISO/TS 15066} es particularmente relevante para aplicaciones
+colaborativas: define cuatro modos posibles de colaboración (parada
+supervisada por seguridad, guiado manual, monitoreo de velocidad y
+separación, y limitación de potencia y fuerza). Este último modo es
+el más utilizado en la práctica, e impone los límites cuantitativos
+de fuerza y presión presentados en la Tabla~\ref{tab:iso}.
+
+\begin{table}[h]
+\centering
+\caption{Límites de fuerza y presión según ISO/TS 15066 para contacto cuasi-estático con distintas partes del cuerpo humano.}
+\label{tab:iso}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{0.8\textwidth}{@{}lcc@{}}
+\toprule
+\textbf{Parte del cuerpo} & \textbf{Fuerza máxima (N)} & \textbf{Presión máxima (N/cm$^2$)} \\
+\midrule
+Dedo                  & 140 & 100 \\
+Mano                  & 190 & 160 \\
+Antebrazo             & 150 & 140 \\
+Cabeza (frontal)      &  65 & 130 \\
+Cabeza (lateral)      &  90 & 100 \\
+Muslo                 & 210 & 150 \\
+Abdomen               & 110 & 140 \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1}
+\end{table}
+
+% =============================================================================
+\section{Captura y preparación del dataset de tapitas}
+
+A diferencia de la Guía 1, donde se utilizó un dataset provisto por
+el laboratorio, en esta guía cada pareja construye su propio dataset
+a partir de fotografías y videos capturados con sus dispositivos.
+Este ejercicio reproduce las condiciones reales de un proyecto de
+control de calidad industrial: el equipo de ingeniería debe definir
+el protocolo de adquisición, capturar las muestras, etiquetarlas y
+organizarlas.
+
+\subsection{Protocolo de captura}
+
+Para garantizar la calidad del dataset, se recomienda seguir las
+siguientes pautas durante la captura:
+
+\begin{itemize}
+  \item \textbf{Iluminación variada}: capturar muestras en distintas condiciones de luz (natural, artificial cálida, fría) para mejorar la robustez del modelo.
+  \item \textbf{Fondos múltiples}: variar el fondo entre la mesa del laboratorio, una hoja blanca, una hoja oscura, etc.
+  \item \textbf{Distancia y ángulo}: variar la distancia cámara--objeto entre 10 y 40 cm y el ángulo de captura.
+  \item \textbf{Cantidad mínima}: al menos \textbf{50 muestras por clase} para entrenamiento, considerando que la aumentación de datos multiplicará efectivamente este número.
+  \item \textbf{Una sola tapita por imagen}: no incluir múltiples tapitas en la misma fotografía (esto correspondería a una tarea de detección, no de clasificación).
+  \item \textbf{Formato}: imágenes en formato JPG o PNG, resolución mínima de 224$\times$224 píxeles.
+\end{itemize}
+
+\subsection{Extracción de frames a partir de video}
+
+Una forma eficiente de capturar muchas muestras en poco tiempo es
+grabar un video corto (15--30 segundos) por cada color, moviendo
+lentamente la tapita frente a la cámara para cubrir distintas
+posiciones y ángulos. Posteriormente se extraen los \emph{frames}
+mediante un script en Python con OpenCV
+(\textbf{Script~\ref{lst:frames}}).
+
+\begin{lstlisting}[language=Python, caption={Extracción de frames a partir de un video para construcción del dataset.}, label={lst:frames}]
+import cv2
+import os
+
+def extraer_frames(video_path, output_dir, cada_n_frames=5):
+    """Extrae un frame cada `cada_n_frames` del video y los guarda."""
+    os.makedirs(output_dir, exist_ok=True)
+    cap = cv2.VideoCapture(video_path)
+    frame_idx, guardados = 0, 0
+    while True:
+        ok, frame = cap.read()
+        if not ok:
+            break
+        if frame_idx % cada_n_frames == 0:
+            nombre = os.path.join(output_dir, f"frame_{guardados:04d}.jpg")
+            cv2.imwrite(nombre, frame)
+            guardados += 1
+        frame_idx += 1
+    cap.release()
+    print(f"Guardados {guardados} frames en {output_dir}")
+
+# Ejemplo de uso
+extraer_frames('videos/rojo.mp4',     'data/tapitas/train/rojo')
+extraer_frames('videos/azul.mp4',     'data/tapitas/train/azul')
+extraer_frames('videos/amarillo.mp4', 'data/tapitas/train/amarillo')
+\end{lstlisting}
+
+\subsection{Organización del dataset}
+
+El dataset se organiza siguiendo la convención de \texttt{flow\_from\_directory}
+de Keras, con subcarpetas por clase dentro de \texttt{train/} y
+\texttt{validation/}. Recordando del Anexo del notebook de la Guía 1,
+las etiquetas se asignan automáticamente en orden alfabético, por lo
+que el diccionario será \texttt{\{`amarillo': 0, `azul': 1, `rojo': 2\}}.
+
+\begin{center}
+\begin{tikzpicture}[
+  every node/.style={font=\footnotesize\ttfamily},
+  level distance=8mm,
+  level 1/.style={sibling distance=40mm},
+  level 2/.style={sibling distance=15mm},
+]
+\node {data/tapitas/}
+  child { node {train/}
+    child { node {amarillo/} }
+    child { node {azul/} }
+    child { node {rojo/} }
+  }
+  child { node {validation/}
+    child { node {amarillo/} }
+    child { node {azul/} }
+    child { node {rojo/} }
+  };
+\end{tikzpicture}
+\end{center}
+
+\paragraph{División train/validation.} Se recomienda destinar el
+80\,\% de las muestras a entrenamiento y el 20\,\% restante a
+validación. Es importante que las muestras de validación sean
+\emph{independientes} de las de entrenamiento (provenir de videos o
+sesiones de captura distintas), no simplemente un subconjunto
+aleatorio de los mismos frames consecutivos.
+
+% =============================================================================
+\section{Entrenamiento con Transfer Learning}\label{sec:tl-practico}
+
+En esta sección se desarrolla la implementación práctica del
+aprendizaje por transferencia introducido conceptualmente en la
+Guía 1. La estrategia se divide en dos fases: \emph{feature extraction}
+con el backbone congelado, seguida de \emph{fine-tuning} de las
+últimas capas.
+
+\subsection{Generadores con aumentación de datos}
+
+A diferencia de la Guía 1, los generadores ahora incorporan
+aumentación de datos. Es importante notar que para clasificación por
+color \emph{no se deben aplicar transformaciones que alteren el
+matiz}; solo se aplican transformaciones geométricas y de iluminación
+moderadas (\textbf{Script~\ref{lst:datagen2}}).
+
+\begin{lstlisting}[language=Python, caption={Generadores con aumentación adecuada para clasificación por color.}, label={lst:datagen2}]
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+IMG_SIZE   = 224
+BATCH_SIZE = 32
+
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    rotation_range=15,
+    width_shift_range=0.10,
+    height_shift_range=0.10,
+    zoom_range=0.15,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+val_datagen = ImageDataGenerator(rescale=1./255)
+
+train_set = train_datagen.flow_from_directory(
+    'data/tapitas/train',
+    target_size=(IMG_SIZE, IMG_SIZE),
+    batch_size=BATCH_SIZE,
+    class_mode='categorical'
+)
+val_set = val_datagen.flow_from_directory(
+    'data/tapitas/validation',
+    target_size=(IMG_SIZE, IMG_SIZE),
+    batch_size=BATCH_SIZE,
+    class_mode='categorical',
+    shuffle=False
+)
+\end{lstlisting}
+
+\subsection{Fase 1: Feature extraction}
+
+Se carga MobileNetV2 pre-entrenado sobre ImageNet sin su cabezal de
+clasificación, se congelan todos sus pesos, y se construye un cabezal
+nuevo con tres salidas (\textbf{Script~\ref{lst:model2}}).
+
+\begin{lstlisting}[language=Python, caption={Construcción del modelo de Transfer Learning con MobileNetV2.}, label={lst:model2}]
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
+
+NUM_CLASSES = 3  # amarillo, azul, rojo
+
+# 1. Cargar backbone pre-entrenado
+backbone = MobileNetV2(
+    input_shape=(IMG_SIZE, IMG_SIZE, 3),
+    include_top=False,
+    weights='imagenet'
+)
+backbone.trainable = False   # congelar el backbone
+
+# 2. Construir el cabezal nuevo
+entrada = backbone.input
+x = backbone.output
+x = GlobalAveragePooling2D()(x)
+x = Dropout(0.3)(x)
+salida = Dense(NUM_CLASSES, activation='softmax')(x)
+
+modelo = Model(inputs=entrada, outputs=salida)
+modelo.compile(
+    optimizer=Adam(learning_rate=1e-3),
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+modelo.summary()
+\end{lstlisting}
+
+El entrenamiento de esta fase utiliza una tasa de aprendizaje
+\textbf{estándar} (típicamente $10^{-3}$), pues solo se está ajustando
+el cabezal --- los pesos del backbone permanecen fijos
+(\textbf{Script~\ref{lst:fit-fe}}).
+
+\begin{lstlisting}[language=Python, caption={Entrenamiento de la fase de feature extraction.}, label={lst:fit-fe}]
+history_fe = modelo.fit(
+    train_set,
+    epochs=15,
+    validation_data=val_set
+)
+\end{lstlisting}
+
+\subsection{Fase 2: Fine-tuning}
+
+Tras la fase de \emph{feature extraction}, se descongelan los últimos
+bloques de MobileNetV2 (no toda la red) y se continúa el
+entrenamiento con una tasa de aprendizaje \emph{muy pequeña}
+(\textbf{Script~\ref{lst:finetune}}). Esto permite que esas últimas
+capas se especialicen ligeramente al dominio del problema sin destruir
+el conocimiento general del backbone.
+
+\begin{lstlisting}[language=Python, caption={Fine-tuning: descongelar los últimos bloques y reentrenar con LR pequeño.}, label={lst:finetune}]
+# Descongelar el backbone completo y luego congelar todo
+# excepto los ultimos 30 layers (los más profundos / específicos)
+backbone.trainable = True
+for layer in backbone.layers[:-30]:
+    layer.trainable = False
+
+# Recompilar con LR pequeño (CRUCIAL para no destruir los pesos)
+modelo.compile(
+    optimizer=Adam(learning_rate=1e-5),
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+history_ft = modelo.fit(
+    train_set,
+    epochs=10,
+    validation_data=val_set
+)
+
+# Guardar el modelo entrenado (formato .h5)
+modelo.save('modelo_tapitas.h5')
+\end{lstlisting}
+
+\paragraph{Por qué un LR tan pequeño en fine-tuning.}
+Si se utilizara la tasa de aprendizaje original ($10^{-3}$) durante
+fine-tuning, los gradientes generados por la pérdida sobre el dataset
+pequeño de tapitas serían \emph{demasiado grandes} para las capas
+pre-entrenadas. Esto destruiría rápidamente las representaciones
+útiles aprendidas sobre ImageNet. La regla práctica es usar entre
+$10^{-5}$ y $10^{-4}$.
+
+% =============================================================================
+\section{Protocolo ADS y comunicación con Beckhoff}
+
+\subsection{El protocolo ADS}
+
+El \textbf{ADS} (\emph{Automation Device Specification}) es un
+protocolo de comunicación desarrollado por Beckhoff para facilitar el
+intercambio de datos entre componentes de un sistema de automatización
+industrial, especialmente cuando se utiliza la plataforma
+\emph{TwinCAT}. Su diseño permite una integración sencilla entre
+controladores PLC, sistemas SCADA, interfaces HMI y aplicaciones
+personalizadas escritas en lenguajes como C\texttt{++}, C\texttt{\#} o
+Python (Figura~\ref{fig:ads}).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{../docs/assets/g2/ads_protocol.png}
+\caption{Arquitectura de comunicación del protocolo ADS. Múltiples aplicaciones cliente (en distintos lenguajes y nodos) se conectan al \emph{router} ADS de TwinCAT mediante IP sockets sobre TCP/IP, accediendo a las variables del PLC por su nombre simbólico. Fuente: Beckhoff Automation (documentación oficial).}
+\label{fig:ads}
+\end{figure}
+
+\paragraph{Características principales del ADS.}
+\begin{itemize}
+  \item \textbf{Acceso por nombre simbólico}: las variables del PLC se acceden por su nombre dentro de una \emph{Global Variable List} (GVL), sin necesidad de direcciones de memoria.
+  \item \textbf{Comunicación sobre TCP/IP}: opera sobre IP sockets, permitiendo comunicación local y remota.
+  \item \textbf{Independencia del lenguaje}: librerías oficiales y de terceros para C\texttt{++}, C\texttt{\#}, Python (\texttt{pyads}), MATLAB, entre otros.
+  \item \textbf{Baja latencia}: diseñado específicamente para entornos de automatización, ofreciendo comunicación adecuada para control en tiempo real.
+\end{itemize}
+
+\subsection{Configuración previa en TwinCAT}
+
+Para que el clasificador Python pueda escribir en las variables del
+IPC Beckhoff, deben cumplirse las siguientes condiciones del lado
+TwinCAT:
+
+\begin{enumerate}
+  \item Declarar las variables en una \texttt{GVL} (Global Variable List) con nombre \texttt{VARIABLES} (mayúsculas).
+  \item Las variables deben ser de tipo \texttt{BOOL}: \texttt{bRojo}, \texttt{bAzul}, \texttt{bAmarillo}.
+  \item Habilitar el acceso ADS a estas variables (atributo \texttt{\{attribute 'TcLinkable'\}} o equivalente).
+  \item Configurar una \emph{route} ADS entre la PC del estudiante y el IPC Beckhoff con su AMS NetID y puerto (851 por defecto).
+\end{enumerate}
+
+\subsection{La librería \texttt{pyads}}
+
+Desde Python, la comunicación se establece a través de la librería
+\texttt{pyads}. El patrón básico se muestra en el
+\textbf{Script~\ref{lst:pyads-basic}}.
+
+\begin{lstlisting}[language=Python, caption={Conexión básica con un PLC Beckhoff mediante pyads.}, label={lst:pyads-basic}]
+import pyads
+
+# Configuración del IPC (sustituir por el AMS NetID real del laboratorio)
+AMS_NET_ID = '192.168.57.231.1.1'
+PUERTO_ADS = 851
+
+# Establecer conexión
+ipc = pyads.Connection(AMS_NET_ID, PUERTO_ADS)
+ipc.open()
+
+# Escribir las tres variables booleanas
+ipc.write_by_name('VARIABLES.bRojo',     False, pyads.PLCTYPE_BOOL)
+ipc.write_by_name('VARIABLES.bAzul',     False, pyads.PLCTYPE_BOOL)
+ipc.write_by_name('VARIABLES.bAmarillo', False, pyads.PLCTYPE_BOOL)
+
+# Cerrar la conexión al terminar
+ipc.close()
+\end{lstlisting}
+
+\paragraph{Importante.} Los nombres utilizados en
+\texttt{write\_by\_name()} deben coincidir \emph{exactamente} con los
+nombres simbólicos definidos en la GVL del proyecto de TwinCAT,
+respetando mayúsculas/minúsculas. Un error de nomenclatura produce
+\texttt{AdsError} en tiempo de ejecución.
+
+% =============================================================================
+\section{Integración: del clasificador a la acción del brazo}
+
+\subsection{Contrato de comunicación clasificador \texorpdfstring{$\leftrightarrow$}{<->} PLC}
+
+El sistema completo opera bajo el siguiente contrato:
+
+\begin{enumerate}
+  \item El clasificador procesa el \emph{frame} actual de la cámara.
+  \item Si la confianza de la predicción es superior a un umbral (típicamente $0.85$), se escribe \texttt{True} en la variable BOOL correspondiente al color predicho, y \texttt{False} en las otras dos.
+  \item Si la confianza es menor al umbral, las tres variables se mantienen en \texttt{False} (no se dispara ninguna acción).
+  \item El programa PLC monitorea las tres variables. Al detectar un flanco ascendente en alguna de ellas, activa la salida digital física correspondiente.
+  \item La salida digital activa el ciclo del brazo robótico (movimiento de recolección y depósito en la zona correspondiente al color detectado).
+  \item Al finalizar el ciclo, el PLC reinicia las variables BOOL.
+\end{enumerate}
+
+\subsection{Bucle principal de inferencia y comunicación}
+
+El \textbf{Script~\ref{lst:loop}} integra todos los componentes: carga
+del modelo entrenado, captura desde cámara, preprocesamiento,
+predicción y escritura de las tres variables BOOL en el IPC.
+
+\begin{lstlisting}[language=Python, caption={Bucle principal: captura, predicción y escritura ADS.}, label={lst:loop}]
+import cv2
+import numpy as np
+import pyads
+from tensorflow.keras.models import load_model
+
+UMBRAL_CONFIANZA = 0.85
+CLASES = ['amarillo', 'azul', 'rojo']   # orden alfabetico
+VARIABLES = ['VARIABLES.bAmarillo',
+             'VARIABLES.bAzul',
+             'VARIABLES.bRojo']
+
+# Cargar modelo y abrir conexion ADS
+modelo = load_model('modelo_tapitas.h5')
+ipc = pyads.Connection('192.168.57.231.1.1', 851)
+ipc.open()
+
+cam = cv2.VideoCapture(0)
+try:
+    while True:
+        ok, frame = cam.read()
+        if not ok:
+            break
+
+        # Preprocesamiento: redimensionar, normalizar, agregar batch
+        img = cv2.resize(frame, (224, 224))
+        x = np.expand_dims(img / 255.0, axis=0)
+
+        # Prediccion
+        pred = modelo.predict(x, verbose=0)[0]
+        idx = int(np.argmax(pred))
+        confianza = float(pred[idx])
+
+        # Decision: solo se activa la variable si la confianza supera
+        # el umbral. Las otras dos se mantienen en False.
+        for i, var in enumerate(VARIABLES):
+            activo = (i == idx) and (confianza >= UMBRAL_CONFIANZA)
+            ipc.write_by_name(var, activo, pyads.PLCTYPE_BOOL)
+
+        # Visualizacion opcional
+        etiqueta = f"{CLASES[idx]} ({confianza:.2f})"
+        cv2.putText(frame, etiqueta, (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        cv2.imshow('Clasificador', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+finally:
+    cam.release()
+    cv2.destroyAllWindows()
+    # Limpiar variables antes de cerrar
+    for var in VARIABLES:
+        ipc.write_by_name(var, False, pyads.PLCTYPE_BOOL)
+    ipc.close()
+\end{lstlisting}
+
+% =============================================================================
+\section{Experiencia guiada}
+
+La experiencia integra todo el flujo del control de calidad inteligente:
+captura del dataset, entrenamiento por transferencia, validación,
+comunicación con el IPC Beckhoff y demostración con el brazo. El trabajo
+práctico se apoya en los notebooks \texttt{proyecto/entrenar.ipynb}
+(construcción y entrenamiento del modelo) y
+\texttt{proyecto/probar\_modelo.ipynb} (prueba con cámara en vivo), junto
+con los scripts de comunicación \texttt{pyads}. Cada notebook explica sus
+celdas en detalle; la presente sección describe qué se realiza en cada
+actividad y su peso en la evaluación. La rúbrica completa se encuentra en
+la \emph{Ficha de Evaluación} del laboratorio: la Guía~2 aporta
+\textbf{10 puntos} que, sumados a los 10 de la Guía~1, conforman la nota
+del laboratorio sobre 20.
+
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{@{}p{5.3cm} X r@{}}
+\toprule
+\textbf{Actividad (herramienta)} & \textbf{Qué se realiza} & \textbf{Puntos} \\
+\midrule
+1. Construcción del dataset \newline {\footnotesize(script de extracción de frames)}
+  & Grabar tres videos ---uno por color--- siguiendo el protocolo de
+    captura de la Sección~3, extraer los frames y organizarlos en
+    \texttt{data/tapitas/}. Documentar el número de muestras por clase.
+  & 1.5 \\
+2. Feature extraction \newline {\footnotesize(\texttt{entrenar.ipynb}, secc. 2--6)}
+  & Configurar los generadores con aumentación adecuada, construir el
+    modelo con \emph{backbone} MobileNetV2 congelado, entrenar el cabezal
+    y evaluar con curvas y matriz de confusión 3$\times$3.
+  & 2.5 \\
+3. Fine-tuning \newline {\footnotesize(\texttt{entrenar.ipynb}, secc. 4--5)}
+  & Descongelar los últimos \emph{layers} del \emph{backbone}, recompilar
+    con un \emph{learning rate} pequeño y reentrenar; comparar el
+    desempeño contra la fase anterior.
+  & 1.5 \\
+4. Conexión ADS \newline {\footnotesize(TwinCAT + \texttt{pyads})}
+  & Declarar las tres variables BOOL en la GVL, escribirlas desde Python
+    (Script~\ref{lst:pyads-basic}) y verificar los cambios en el
+    \emph{watchpoint} de TwinCAT.
+  & 2.0 \\
+5. Demostración integrada \newline {\footnotesize(\texttt{probar\_modelo.ipynb} + HMI + brazo)}
+  & Ejecutar el bucle de inferencia (Script~\ref{lst:loop}) con la cámara
+    sobre el espacio de trabajo: cada color detectado activa su BOOL y
+    dispara la acción correcta del brazo. Grabar un video de la
+    demostración.
+  & 2.0 \\
+6. Discusión final
+  & Reflexionar sobre cómo aplicar o adaptar el sistema en el proyecto
+    integrador de automatización de línea de producción.
+  & 0.5 \\
+\midrule
+\textbf{Total Guía 2} & & \textbf{10.0} \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1}
+
+% =============================================================================
+\section{Anexos}
+
+\subsection*{Anexo B1. Variables del proyecto TwinCAT}
+
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}p{3.0cm} p{2.5cm} X@{}}
+\toprule
+\textbf{Variable} & \textbf{Tipo} & \textbf{Descripción} \\
+\midrule
+\texttt{bRojo}     & \texttt{BOOL} & Verdadero cuando se detecta una tapita roja con confianza mayor al umbral. \\
+\texttt{bAzul}     & \texttt{BOOL} & Verdadero cuando se detecta una tapita azul con confianza mayor al umbral. \\
+\texttt{bAmarillo} & \texttt{BOOL} & Verdadero cuando se detecta una tapita amarilla con confianza mayor al umbral. \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1}
+
+\medskip
+
+Estas variables deben declararse dentro de una GVL llamada
+\texttt{VARIABLES} y deben ser accesibles vía ADS. El nombre de la
+GVL forma parte del identificador simbólico utilizado en
+\texttt{pyads.write\_by\_name()}.
+
+\subsection*{Anexo B2. Tipos de datos pyads más utilizados}
+
+\begin{tabularx}{\textwidth}{@{}p{4.0cm} X@{}}
+\toprule
+\textbf{Constante pyads} & \textbf{Tipo TwinCAT correspondiente} \\
+\midrule
+\texttt{PLCTYPE\_BOOL}   & \texttt{BOOL} \\
+\texttt{PLCTYPE\_INT}    & \texttt{INT}      (16 bits con signo) \\
+\texttt{PLCTYPE\_DINT}   & \texttt{DINT}     (32 bits con signo) \\
+\texttt{PLCTYPE\_REAL}   & \texttt{REAL}     (32 bits coma flotante) \\
+\texttt{PLCTYPE\_LREAL}  & \texttt{LREAL}    (64 bits coma flotante) \\
+\texttt{PLCTYPE\_STRING} & \texttt{STRING}   (cadena de texto) \\
+\texttt{PLCTYPE\_TIME}   & \texttt{TIME}     (en milisegundos) \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Anexo B3. Diagnóstico de errores comunes}
+
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}p{6.0cm} X@{}}
+\toprule
+\textbf{Error} & \textbf{Causa probable y solución} \\
+\midrule
+\texttt{AdsError: target machine not found} & La AMS \emph{route} entre la PC y el IPC no está configurada. Verificar en \emph{TwinCAT System Manager $\rightarrow$ Routes}. \\
+\texttt{AdsError: symbol not found}         & El nombre de la variable en \texttt{write\_by\_name} no coincide con la GVL. Verificar mayúsculas/minúsculas y prefijo \texttt{VARIABLES.}. \\
+Predicciones siempre idénticas              & El modelo está sobreajustado o el preprocesamiento no coincide entre entrenamiento e inferencia. Verificar la normalización. \\
+Acción del brazo no se dispara              & La variable se escribe correctamente pero el programa PLC no actúa sobre ella. Verificar la lógica del POU en TwinCAT. \\
+Confianza siempre alta pero clase incorrecta & Dataset desbalanceado o de baja diversidad. Capturar más muestras en condiciones variadas. \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1}
+
+\end{document}
