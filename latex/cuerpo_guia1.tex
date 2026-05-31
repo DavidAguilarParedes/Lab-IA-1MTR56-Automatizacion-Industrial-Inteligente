@@ -14,27 +14,22 @@ detalle; esta guía es la referencia teórica y describe \emph{qué} se hace y
 
 \section{Preparación del entorno en VS Code}
 
-Antes de ejecutar los notebooks, cada pareja crea un \textbf{entorno virtual con la versión
-correcta de Python} (3.10 o 3.11). Este es el paso más delicado: instalar las dependencias
-sobre el Python equivocado ---el del sistema u otra versión--- provoca errores de
-compatibilidad con TensorFlow.
+El único requisito delicado es usar un entorno virtual con la \textbf{versión correcta de
+Python} (3.10 o 3.11): con otra versión, TensorFlow no se instala correctamente.
 
 \begin{enumerate}
   \item Abrir la carpeta del proyecto en \textbf{Visual Studio Code}.
-  \item Crear el entorno: \emph{Command Palette} (\texttt{Ctrl+Shift+P}) $\rightarrow$
+  \item \emph{Command Palette} (\texttt{Ctrl+Shift+P}) $\rightarrow$
         \texttt{Python: Create Environment} $\rightarrow$ \texttt{Venv} $\rightarrow$ elegir
-        un intérprete \textbf{Python 3.10} o \textbf{3.11}. Se crea la carpeta \texttt{.venv}.
-  \item Abrir un notebook y, arriba a la derecha, \texttt{Select Kernel} y elegir ese
-        entorno \texttt{.venv}.
-  \item Instalar las dependencias \textbf{desde una celda del notebook} (así se instalan en
-        el entorno seleccionado, no en otro Python):
+        un intérprete \textbf{Python 3.10} o \textbf{3.11}. Cuando VS Code lo solicite,
+        marcar \texttt{requirements.txt} para que instale las dependencias en ese entorno.
+  \item En cada notebook, \texttt{Select Kernel} (arriba a la derecha) y elegir el entorno
+        \texttt{.venv} recién creado.
 \end{enumerate}
 
-\begin{lstlisting}[language=Python]
-%pip install -r ../requirements.txt
-\end{lstlisting}
-
-\noindent Verificar la versión antes de continuar; debe iniciar con 3.10 o 3.11:
+Con el entorno correcto seleccionado, las celdas de \texttt{import} de los notebooks
+funcionan directamente (las dependencias ya quedaron instaladas al crear el entorno). Para
+confirmar la versión:
 
 \begin{lstlisting}[language=Python]
 import sys, tensorflow as tf
