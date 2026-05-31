@@ -502,8 +502,10 @@ import cv2
 import numpy as np
 import pyads
 from tensorflow.keras.models import load_model
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
 UMBRAL_CONFIANZA = 0.85
+IMG_SIZE = 128                          # mismo tamano usado al entrenar (NB4)
 CLASES = ['amarillo', 'azul', 'rojo']   # orden alfabetico
 VARIABLES = ['VARIABLES.bAmarillo',
              'VARIABLES.bAzul',
@@ -521,9 +523,11 @@ try:
         if not ok:
             break
 
-        # Preprocesamiento: redimensionar, normalizar, agregar batch
-        img = cv2.resize(frame, (224, 224))
-        x = np.expand_dims(img / 255.0, axis=0)
+        # Preprocesamiento MobileNetV2: BGR->RGB, redimensionar y normalizar
+        # a [-1, 1] con preprocess_input (igual que en el NB4/NB6).
+        img = cv2.cvtColor(cv2.resize(frame, (IMG_SIZE, IMG_SIZE)),
+                           cv2.COLOR_BGR2RGB)
+        x = np.expand_dims(preprocess_input(img.astype('float32')), axis=0)
 
         # Prediccion
         pred = modelo.predict(x, verbose=0)[0]
