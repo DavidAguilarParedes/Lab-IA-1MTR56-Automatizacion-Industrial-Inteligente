@@ -1,5 +1,9 @@
 # Laboratorio de IA — Clasificacion de Imagenes con CNN
 
+La guia completa del laboratorio (Parte 1 — IA y Parte 2 — Vision) esta en
+`guias/guia_laboratorio.pdf`. Es la referencia teorica y practica; el trabajo
+paso a paso se hace en los notebooks.
+
 ## Instalacion
 
 ### 1. Instalar Python 3.10
