@@ -442,6 +442,42 @@ Para problemas de clasificación, las métricas más utilizadas son:
 
 Un detalle de métricas adicionales se presenta en el \textbf{Anexo~A4}.
 
+\subsection{Interpretación de métricas con conjuntos de datos pequeños}
+
+En laboratorios con datasets reducidos ---decenas o pocos cientos de
+imágenes por clase--- la \emph{accuracy} sobre el conjunto de validación
+debe interpretarse con cautela. Conviene tener presentes tres
+consideraciones metodológicas que diferencian un análisis riguroso de
+una lectura ingenua de los resultados.
+
+\paragraph{La accuracy es una estimación con incertidumbre.} Medida
+sobre $n$ imágenes de validación, la accuracy es una proporción muestral
+cuya desviación estándar aproximada es $\sqrt{p(1-p)/n}$. Con $n = 25$
+imágenes, una accuracy del $80\%$ conlleva una incertidumbre cercana a
+$\pm 8$ puntos porcentuales, y cada imagen individual desplaza el
+resultado en $4\%$. En consecuencia, una diferencia pequeña de accuracy
+entre dos modelos evaluados sobre un conjunto reducido \emph{no} es
+concluyente: debe acompañarse de la matriz de confusión y de las
+métricas por clase antes de afirmar que un modelo supera a otro.
+
+\paragraph{La brecha entre entrenamiento y validación es más informativa
+que el valor absoluto.} Una accuracy de entrenamiento elevada junto a
+una accuracy de validación sensiblemente menor (brecha mayor a 10--15
+puntos) es la firma del \emph{overfitting}: el modelo memoriza el
+conjunto de entrenamiento en lugar de generalizar. Esta brecha ---y no
+la accuracy aislada--- es el diagnóstico que orienta las decisiones de
+mejora: capturar más datos, aplicar aumentación, reforzar la
+regularización o, como se aborda en la Guía 2, recurrir al aprendizaje
+por transferencia.
+
+\paragraph{Reproducibilidad y variabilidad.} Aunque en los notebooks se
+fijan las semillas de los generadores aleatorios (\texttt{random},
+\texttt{numpy} y \texttt{tensorflow}), pueden persistir pequeñas
+variaciones entre ejecuciones debido al orden de los lotes y al
+no-determinismo de ciertas operaciones numéricas. Las conclusiones del
+informe deben sostenerse sobre tendencias robustas y reproducibles, no
+sobre el último decimal de una única corrida.
+
 % =============================================================================
 \section{Preprocesamiento y aumentación de datos}
 
