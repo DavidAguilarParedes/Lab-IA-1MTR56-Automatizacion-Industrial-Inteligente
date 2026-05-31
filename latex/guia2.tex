@@ -670,7 +670,7 @@ GVL forma parte del identificador simbólico utilizado en
 \toprule
 \textbf{Error} & \textbf{Causa probable y solución} \\
 \midrule
-\texttt{AdsError: target machine not found} & La AMS \emph{route} entre la PC y el IPC no está configurada. Verificar en \emph{TwinCAT System Manager $\rightarrow$ Routes}. \\
+\texttt{Missing ADS routes (7)} \newline \texttt{target machine not found} & La AMS \emph{route} entre la PC y el IPC no está configurada (\texttt{open()} no la valida; el error aparece en la primera lectura/escritura). Crearla en \emph{TwinCAT (bandeja) $\rightarrow$ Router $\rightarrow$ Edit Routes $\rightarrow$ Add Route}, o con \texttt{pyads.add\_route\_to\_plc(...)}. \\
 \texttt{AdsError: symbol not found}         & El nombre de la variable en \texttt{write\_by\_name} no coincide con la GVL. Verificar mayúsculas/minúsculas y prefijo \texttt{VARIABLES.}. \\
 Predicciones siempre idénticas              & El modelo está sobreajustado o el preprocesamiento no coincide entre entrenamiento e inferencia. Verificar la normalización. \\
 Acción del brazo no se dispara              & La variable se escribe correctamente pero el programa PLC no actúa sobre ella. Verificar la lógica del POU en TwinCAT. \\
