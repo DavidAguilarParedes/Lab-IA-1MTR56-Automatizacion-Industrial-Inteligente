@@ -1,11 +1,19 @@
-Este directorio debe contener subcarpetas con imágenes de tapitas.
-Use scripts/dividir_video.py para extraer frames de sus videos.
+Este directorio debe contener una subcarpeta por clase con imagenes de tapitas.
 
-Estructura esperada:
+NO necesitas crearlas a mano: el notebook
+  parte1_ia/notebook3_clasificador_tapitas.ipynb
+extrae los frames automaticamente desde tus 4 videos (rojo, azul, amarillo y
+fondo). Grabalos o subelos en el Paso 1 del notebook (Opcion A o B) y el
+Paso 2 genera las imagenes aqui.
+
+Estructura que crea el notebook:
   tapitas/
     rojo/
       frame_rojo_00001.jpg
-      frame_rojo_00002.jpg
+      ...
     azul/
-      frame_azul_00001.jpg
+      ...
+    amarillo/
+      ...
+    fondo/
       ...
