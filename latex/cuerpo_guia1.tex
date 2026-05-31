@@ -7,35 +7,87 @@ laboratorio: se entrena una CNN \emph{desde cero}; la Parte~2 introducirá el
 aprendizaje por transferencia sobre el mismo dominio.
 
 \textbf{Materiales.} Python 3.10 con el entorno del laboratorio; el dataset de
-botellas provisto en \texttt{data/botellas/}; y los notebooks
-\texttt{notebook1\_cnn\_desde\_cero.ipynb}, \texttt{notebook2\_data\_augmentation.ipynb}
-y \texttt{notebook3\_clasificador\_tapitas.ipynb}. Cada notebook explica su código en
-detalle; esta guía es la referencia teórica y la describe \emph{qué} se hace y
+botellas provisto en \texttt{data/botellas/}; y los tres notebooks de la carpeta
+\texttt{parte1\_ia/} (Notebook~1 a Notebook~3). Cada notebook explica su código en
+detalle; esta guía es la referencia teórica y describe \emph{qué} se hace y
 \emph{cuánto} aporta a la evaluación.
+
+\section{Preparación del entorno en VS Code}
+
+Antes de ejecutar los notebooks, cada pareja crea un \textbf{entorno virtual con la versión
+correcta de Python} (3.10 o 3.11). Este es el paso más delicado: instalar las dependencias
+sobre el Python equivocado ---el del sistema u otra versión--- provoca errores de
+compatibilidad con TensorFlow.
+
+\begin{enumerate}
+  \item Abrir la carpeta del proyecto en \textbf{Visual Studio Code}.
+  \item Crear el entorno: \emph{Command Palette} (\texttt{Ctrl+Shift+P}) $\rightarrow$
+        \texttt{Python: Create Environment} $\rightarrow$ \texttt{Venv} $\rightarrow$ elegir
+        un intérprete \textbf{Python 3.10} o \textbf{3.11}. Se crea la carpeta \texttt{.venv}.
+  \item Abrir un notebook y, arriba a la derecha, \texttt{Select Kernel} y elegir ese
+        entorno \texttt{.venv}.
+  \item Instalar las dependencias \textbf{desde una celda del notebook} (así se instalan en
+        el entorno seleccionado, no en otro Python):
+\end{enumerate}
+
+\begin{lstlisting}[language=Python]
+%pip install -r ../requirements.txt
+\end{lstlisting}
+
+\noindent Verificar la versión antes de continuar; debe iniciar con 3.10 o 3.11:
+
+\begin{lstlisting}[language=Python]
+import sys, tensorflow as tf
+print(sys.version)        # 3.10.x o 3.11.x
+print(tf.__version__)     # 2.20.0
+\end{lstlisting}
 
 \section{Redes neuronales convolucionales}
 
 Una CNN aprende a extraer características visuales directamente de los píxeles, sin
-ingeniería manual de \emph{features}. Se compone de tres tipos de capas:
+ingeniería manual de \emph{features}. Se compone de tres tipos de capas
+(Figura~\ref{fig:cnn}):
 
 \begin{itemize}
   \item \textbf{Convolución} (\texttt{Conv2D}): aplica filtros que se deslizan sobre la
         imagen y detectan patrones locales ---bordes, texturas, formas---. Los filtros
         se aprenden durante el entrenamiento (Figura~\ref{fig:conv}).
   \item \textbf{Pooling} (\texttt{MaxPooling2D}): reduce la resolución conservando la
-        información dominante, lo que aporta robustez y disminuye el cómputo.
+        información dominante, lo que aporta robustez y disminuye el cómputo
+        (Figura~\ref{fig:pool}).
   \item \textbf{Capas densas} (\texttt{Dense}): combinan las características extraídas; la
         capa de salida usa \emph{softmax} para producir una probabilidad por clase.
 \end{itemize}
 
 La función de activación \emph{ReLU} introduce la no linealidad entre capas; sin ella la
-red colapsaría a una única transformación lineal.
+red colapsaría a una única transformación lineal (Figura~\ref{fig:act}).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\textwidth]{../docs/assets/g1/typical_cnn_wikimedia.png}
+\caption{Arquitectura típica de una CNN: bloques de convolución y pooling extraen características de complejidad creciente; las capas densas producen la clasificación. Fuente: Wikimedia Commons (CC BY-SA).}
+\label{fig:cnn}
+\end{figure}
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{../docs/assets/g1/g1_fig05_convolution.png}
 \caption{Operación de convolución: un filtro recorre la imagen y produce un mapa de características. Fuente: Stanford CS231n.}
 \label{fig:conv}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.78\textwidth]{../docs/assets/g1/g1_fig07_pooling.png}
+\caption{Max pooling: cada región se resume por su valor máximo, reduciendo la resolución. Fuente: elaboración propia.}
+\label{fig:pool}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.78\textwidth]{../docs/assets/g1/g1_fig08_activations.png}
+\caption{Funciones de activación habituales. \emph{ReLU} es la más usada en capas convolucionales. Fuente: elaboración propia.}
+\label{fig:act}
 \end{figure}
 
 \section{Entrenamiento y evaluación}
@@ -63,8 +115,11 @@ la arquitectura.
 El trabajo se desarrolla en tres notebooks que la pareja ejecuta y completa. La
 indicación es la misma para todos: \textbf{ejecutar el notebook de principio a fin,
 completar las celdas marcadas como \emph{«completar»} y responder por escrito las
-preguntas conceptuales}. La rúbrica completa está en la \emph{Ficha de Evaluación}: la
-Parte~1 aporta \textbf{10 puntos} y la Parte~2 otros 10, para una nota sobre 20.
+preguntas conceptuales}. Como los notebooks ya vienen implementados, \textbf{la nota
+evalúa la comprensión}: las respuestas a las preguntas conceptuales y la interpretación y
+justificación de los resultados, no la simple ejecución. La rúbrica completa está en la
+\emph{Ficha de Evaluación}: la Parte~1 aporta \textbf{10 puntos} y la Parte~2 otros 10,
+para una nota sobre 20.
 
 Los Notebooks 1 y 2 usan el dataset de botellas (vidrio/plástico) provisto; el Notebook~3
 usa un dataset de tapitas construido por la propia pareja. El dataset se organiza en
@@ -83,13 +138,20 @@ subcarpetas por clase dentro de \texttt{train/} y \texttt{validation/}, de modo 
 \end{tikzpicture}
 \end{center}
 
-\subsection{Notebook 1 --- \texttt{notebook1\_cnn\_desde\_cero.ipynb}}
+\subsection{Notebook 1: CNN desde cero}
 
 Recorre el ciclo completo de una CNN entrenada desde cero: carga del dataset, definición
-y compilación de la arquitectura (bloques \texttt{Conv2D}\,+\,\texttt{MaxPooling2D},
-\texttt{Flatten}, capa densa con \emph{dropout} y salida \emph{softmax}), entrenamiento,
-evaluación con matriz de confusión y predicción sobre imágenes propias (Figuras~\ref{fig:curvas}
-y~\ref{fig:confmat}).
+y compilación de la arquitectura (Figura~\ref{fig:arch}: bloques
+\texttt{Conv2D}\,+\,\texttt{MaxPooling2D}, \texttt{Flatten}, capa densa con \emph{dropout}
+y salida \emph{softmax}), entrenamiento, evaluación con matriz de confusión y predicción
+sobre imágenes propias (Figuras~\ref{fig:curvas} y~\ref{fig:confmat}).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{../docs/assets/g1/arquitectura_botellas.png}
+\caption{Arquitectura de la CNN del laboratorio. Fuente: elaboración propia (NN-SVG).}
+\label{fig:arch}
+\end{figure}
 
 \renewcommand{\arraystretch}{1.3}
 \begin{tabularx}{\textwidth}{@{}p{6.2cm} X r@{}}
@@ -120,7 +182,7 @@ y~\ref{fig:confmat}).
 \label{fig:confmat}
 \end{figure}
 
-\subsection{Notebook 2 --- \texttt{notebook2\_data\_augmentation.ipynb}}
+\subsection{Notebook 2: aumentación de datos}
 
 Retoma el clasificador anterior para evidenciar y mitigar el \emph{overfitting}: reproduce
 el sobreajuste del modelo base, selecciona transformaciones de aumentación pertinentes,
@@ -138,7 +200,7 @@ reentrena y compara el desempeño frente al modelo sin aumentar.
 \end{tabularx}
 \renewcommand{\arraystretch}{1}
 
-\subsection{Notebook 3 --- \texttt{notebook3\_clasificador\_tapitas.ipynb}}
+\subsection{Notebook 3: clasificador de tapitas}
 
 Introduce un dataset propio: tapitas de colores (\textbf{rojo}, \textbf{azul},
 \textbf{amarillo}) más una clase \texttt{fondo} (imágenes sin tapita). La pareja graba un
