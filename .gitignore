@@ -39,3 +39,6 @@ captura_*.jpg
 
 # Videos de tapitas grabados/subidos por el alumno
 data/videos_tapitas/
+
+# Videos de prueba generados
+videos_demo/
