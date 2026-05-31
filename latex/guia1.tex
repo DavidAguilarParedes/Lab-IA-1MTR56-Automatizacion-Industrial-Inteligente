@@ -28,8 +28,8 @@ primera implementación práctica en Python sobre un problema de
 clasificación de imágenes industriales.
 
 Esta guía constituye la \textbf{primera parte} del laboratorio combinado
-de Inteligencia Artificial y Visión por Computadora. Su componente es
-formativo (30\,\% de la nota total del laboratorio). La segunda parte
+de Inteligencia Artificial y Visión por Computadora, y aporta
+\textbf{10 puntos} a la nota total del laboratorio (sobre 20). La segunda parte
 (Guía 2) introducirá el aprendizaje por transferencia con MobileNetV2
 para la clasificación de tapitas de colores e integrará el sistema
 con un controlador industrial Beckhoff vía el protocolo ADS.
@@ -55,7 +55,7 @@ con un controlador industrial Beckhoff vía el protocolo ADS.
 \begin{itemize}
   \item Computadora con Python 3.10 o superior y entorno virtual del laboratorio activo.
   \item Dataset de botellas (vidrio y plástico), provisto en \texttt{data/botellas/}.
-  \item Notebook de trabajo \texttt{labs/lab1\_cnn\_basica.ipynb}.
+  \item Notebooks de trabajo \texttt{labs/lab1\_cnn\_basica.ipynb} y \texttt{labs/lab2\_data\_augmentation.ipynb}.
   \item Librerías \texttt{tensorflow}, \texttt{numpy}, \texttt{matplotlib}, \texttt{seaborn}.
 \end{itemize}
 
@@ -207,17 +207,23 @@ la salida final.
 \end{figure}
 
 La Figura~\ref{fig:arch} presenta la arquitectura específica que se
-implementará en la experiencia guiada (Sección~\ref{sec:guiada}). Está
-organizada en cuatro bloques: tres bloques convolucionales (B1, B2, B3)
-seguidos de un bloque denso (B4) que produce la clasificación final.
-Esta arquitectura incorpora \emph{Batch Normalization} para acelerar la
-convergencia y \emph{Dropout} para reducir el sobreajuste (ambas
-técnicas se desarrollan más adelante).
+implementará en la experiencia guiada (Sección~\ref{sec:guiada}). Es una
+CNN \textbf{sencilla, entrenada desde cero}: dos etapas de convolución y
+\emph{max pooling} que extraen mapas de características cada vez más
+compactos, seguidas de un clasificador totalmente conectado. Partiendo
+de una imagen de entrada de $64\times64\times3$, cada capa
+\texttt{Conv2D} de $32$ filtros $3\times3$ reduce el mapa a
+$62\times62$ y luego a $29\times29$ (convolución \emph{valid}), y cada
+\texttt{MaxPooling2D} de $2\times2$ lo lleva a $31\times31$ y
+$14\times14$ respectivamente. El resultado se aplana
+(\texttt{Flatten}) y se conecta a una capa densa de $128$ neuronas con
+\emph{Dropout} de $0.5$, y finalmente a una capa de salida de $2$
+neuronas con activación \emph{softmax} (vidrio / plástico).
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.95\textwidth]{../docs/assets/g1/arquitectura_lab.png}
-\caption{Arquitectura de la CNN utilizada en la experiencia guiada. \textbf{B1, B2}: extracción de características de bajo nivel mediante \texttt{Conv2D} + \texttt{BatchNormalization} + \texttt{MaxPooling2D} + \texttt{Dropout}. \textbf{B3}: convolución profunda con \texttt{GlobalAveragePooling2D} para reducción a vector. \textbf{B4}: clasificador denso con dos capas totalmente conectadas y regularización. La capa de salida produce la distribución de probabilidad sobre \texttt{NUM\_CLASSES}.}
+\includegraphics[width=\textwidth]{../docs/assets/g1/arquitectura_botellas.png}
+\caption{Arquitectura de la CNN entrenada desde cero en la experiencia guiada (clasificador de botellas). Dos bloques \texttt{Conv2D}($32$, $3\times3$) + \texttt{MaxPooling2D}($2\times2$) extraen las características; tras \texttt{Flatten}, una capa densa de $128$ neuronas con \emph{dropout} $0.5$ y una capa de salida \emph{softmax} de $2$ neuronas producen la clasificación. Fuente: elaboración propia.}
 \label{fig:arch}
 \end{figure}
 
@@ -448,8 +454,8 @@ estabiliza el entrenamiento al mantener las activaciones de la red
 dentro de un rango acotado y evitar gradientes excesivamente grandes
 durante la \emph{backpropagation}.
 
-Algunos modelos pre-entrenados (como MobileNetV2, Sección~\ref{sec:tl})
-requieren una normalización distinta, típicamente al rango $[-1, 1]$
+Algunos modelos pre-entrenados (como MobileNetV2, que se empleará en la
+Guía 2) requieren una normalización distinta, típicamente al rango $[-1, 1]$
 mediante la transformación $x \mapsto 2 \cdot (x / 255) - 1$, o la
 sustracción de la media por canal del dataset original. Es
 responsabilidad del estudiante aplicar la normalización adecuada según
@@ -500,8 +506,11 @@ la convergencia y mejora la generalización.
 En una CNN, la convención más común es insertar una capa
 \texttt{BatchNormalization()} inmediatamente después de cada capa
 \texttt{Conv2D} o \texttt{Dense}, antes de la siguiente operación
-(pooling o nueva convolución). Esta es precisamente la disposición
-adoptada en la arquitectura de la Figura~\ref{fig:arch}.
+(pooling o nueva convolución). La arquitectura sencilla de la
+experiencia guiada (Figura~\ref{fig:arch}) no la incorpora ---para
+mantener el modelo mínimo y enfocar la atención en el flujo básico---,
+pero es una técnica de uso extendido en redes más profundas, como el
+\emph{backbone} MobileNetV2 que se empleará en la Guía 2.
 
 \subsection{Regularización mediante Dropout}
 
@@ -530,22 +539,26 @@ introduce el aprendizaje por transferencia (\emph{transfer learning})
 sobre un problema más complejo.
 
 El trabajo práctico se desarrolla en \textbf{dos notebooks
-complementarios} que la pareja ejecuta y completa. Cada notebook
-contiene la explicación detallada de cada celda y la indicación de los
-fragmentos que el estudiante debe completar; la presente sección no
-reproduce ese contenido, sino que describe \emph{qué} se realiza en cada
-etapa y \emph{cuánto} aporta a la evaluación. El detalle de las entregas
-y la rúbrica se encuentran en la \emph{Ficha de Evaluación} del
-laboratorio, que cubre ambas guías: la Guía~1 aporta \textbf{10 puntos}
-y la Guía~2 otros 10, para una nota total sobre 20.
+complementarios} que la pareja ejecuta y completa. La indicación general
+es la misma para ambos: \textbf{ejecutar el notebook de principio a fin,
+completar todas las celdas marcadas como \emph{«completar»} y responder
+por escrito todas las preguntas conceptuales} que aparecen intercaladas.
+Cada notebook contiene la explicación detallada de cada celda; la
+presente sección no reproduce ese contenido, sino que describe
+\emph{qué} se realiza en cada etapa y \emph{cuánto} aporta a la
+evaluación. El detalle de las entregas y la rúbrica se encuentran en la
+\emph{Ficha de Evaluación} del laboratorio, que cubre ambas guías: la
+Guía~1 aporta \textbf{10 puntos} y la Guía~2 otros 10, para una nota
+total sobre 20.
 
-La arquitectura propuesta es deliberadamente sencilla
-(Figura~\ref{fig:arch}): varios bloques convolucionales con
-\emph{batch normalization}, \emph{pooling} y \emph{dropout}, seguidos de
-un clasificador denso y una capa de salida \emph{softmax} de dos
-neuronas. El dataset se organiza en subcarpetas, una por clase, dentro
-de \texttt{train/} y \texttt{validation/}, de modo que
-\texttt{ImageDataGenerator} infiera las etiquetas automáticamente:
+La arquitectura es la CNN sencilla descrita en la
+Figura~\ref{fig:arch}: dos bloques \texttt{Conv2D}($32$,
+$3\times3$)\,+\,\texttt{MaxPooling2D}, seguidos de \texttt{Flatten}, una
+capa densa de $128$ neuronas con \emph{dropout} $0.5$ y una capa de
+salida \emph{softmax} de dos neuronas. El dataset se organiza en
+subcarpetas, una por clase, dentro de \texttt{train/} y
+\texttt{validation/}, de modo que \texttt{ImageDataGenerator} infiera
+las etiquetas automáticamente:
 
 \begin{center}
 \begin{tikzpicture}[
@@ -655,111 +668,25 @@ Discusión crítica                                       & 2.0 \\
 \renewcommand{\arraystretch}{1}
 \end{center}
 % =============================================================================
-\section{Aprendizaje por transferencia (Transfer Learning)}\label{sec:tl}
+\section{Cierre: el límite del entrenamiento desde cero}\label{sec:cierre}
 
-\subsection{Motivación}
+La actividad de evaluación sobre datos propios suele revelar un
+resultado aleccionador: el clasificador, entrenado desde cero con un
+dataset reducido, alcanza buena \emph{accuracy} sobre el conjunto de
+validación, pero \textbf{falla al enfrentar fotografías reales} tomadas
+en condiciones de iluminación, fondo o ángulo distintas a las del
+entrenamiento. La aumentación de datos (Notebook~2) mitiga parcialmente
+el problema, pero no lo resuelve: una CNN entrenada desde cero necesita,
+para generalizar bien, muchas más imágenes de las que es razonable
+capturar a mano.
 
-Entrenar una CNN desde cero requiere típicamente conjuntos de datos
-muy grandes (decenas o cientos de miles de imágenes) y tiempo
-considerable de cómputo. Cuando el problema de interés cuenta con un
-dataset reducido (decenas o pocos cientos de imágenes por clase), una
-CNN entrenada desde cero tiende a sobreajustar y a generalizar
-pobremente, incluso aplicando aumentación de datos.
-
-El \textbf{aprendizaje por transferencia} (\emph{transfer learning})
-explota la observación de que las primeras capas de una CNN aprenden
-detectores de bordes, texturas y patrones de bajo nivel que son
-\emph{universales}: útiles no solo para la tarea original sobre la que
-la red fue entrenada, sino para casi cualquier tarea de visión por
-computadora. La estrategia consiste en partir de una CNN ya entrenada
-sobre un dataset masivo (típicamente \emph{ImageNet}, con
-$\approx 1.3$ millones de imágenes en 1000 clases) y \emph{reutilizar}
-sus capas como extractor de características para nuestro problema
-particular (Figura~\ref{fig:tl}).
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=\textwidth]{../docs/assets/g1/g1_fig13_transfer_learning.png}
-\caption{Esquema de aprendizaje por transferencia. El \emph{backbone} pre-entrenado actúa como extractor universal de características; el cabezal nuevo se entrena para especializar la red al problema específico (en G2, la clasificación de tapitas).}
-\label{fig:tl}
-\end{figure}
-
-\subsection{MobileNetV2 como backbone}
-
-\textbf{MobileNetV2} es una arquitectura propuesta por Sandler et al.
-(Google, 2018) diseñada específicamente para dispositivos con recursos
-limitados (móviles, sistemas embebidos, computadoras industriales). Sus
-características principales son:
-
-\begin{itemize}
-  \item Aproximadamente $3.5$ millones de parámetros (frente a $\sim 60$ millones de VGG-16 o $\sim 25$ millones de ResNet-50).
-  \item Tamaño en disco $\approx 14$ MB, ejecutable en CPU sin GPU.
-  \item Bloques con conexiones residuales invertidas y convoluciones \emph{depthwise separable}, que reducen drásticamente el cómputo respecto a CNN tradicionales.
-  \item Entrada estándar de $224 \times 224 \times 3$ píxeles.
-  \item Pesos pre-entrenados sobre ImageNet, disponibles directamente desde el módulo \texttt{keras.applications}.
-\end{itemize}
-
-Esta combinación de tamaño compacto y desempeño competitivo la
-convierte en el backbone preferido para sistemas de control de calidad
-embebidos, como el que se implementará en la Guía 2.
-
-\subsection{Feature extraction y fine-tuning}
-
-Existen dos modalidades principales de aprendizaje por transferencia:
-
-\paragraph{1. Feature extraction (extracción de características).} Se
-congelan todos los pesos del backbone pre-entrenado (no se actualizan
-durante el entrenamiento) y únicamente se entrena un nuevo cabezal de
-clasificación adaptado al problema específico. El backbone actúa como
-un extractor de características fijo. Es la modalidad más rápida y la
-recomendada como primer paso.
-
-\paragraph{2. Fine-tuning (ajuste fino).} Tras completar la fase
-anterior, se descongelan los últimos bloques del backbone (típicamente
-las capas más profundas, las que codifican características de alto
-nivel) y se continúa el entrenamiento con una tasa de aprendizaje
-\emph{muy pequeña} (del orden de $10^{-5}$). Esto permite que esas
-capas se especialicen ligeramente al dominio del problema sin destruir
-el conocimiento general adquirido.
-
-El \textbf{Script~6} (que se implementará en la Guía 2) muestra el
-patrón típico de instanciación de MobileNetV2 para \emph{feature
-extraction}.
-
-\begin{lstlisting}[language=Python, caption={Patrón típico de Transfer Learning con MobileNetV2 (se implementará en la Guía 2).}, label={lst:tl}]
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.layers import GlobalAveragePooling2D, Dense
-from tensorflow.keras.models import Model
-
-# 1. Cargar backbone pre-entrenado sin la cabeza original
-backbone = MobileNetV2(
-    input_shape=(224, 224, 3),
-    include_top=False,           # quitamos la capa de 1000 clases
-    weights='imagenet'           # pesos pre-entrenados
-)
-backbone.trainable = False        # congelar el backbone
-
-# 2. Construir el cabezal nuevo
-x = backbone.output
-x = GlobalAveragePooling2D()(x)
-salida = Dense(3, activation='softmax')(x)   # 3 clases: R, A, Y
-
-# 3. Modelo final
-modelo = Model(inputs=backbone.input, outputs=salida)
-modelo.compile(
-    optimizer='adam',
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
-)
-\end{lstlisting}
-
-\paragraph{Cuándo usar cada modalidad.} En general:
-\begin{itemize}
-  \item Dataset pequeño y muy similar al dominio original (e.g., otra tarea de objetos cotidianos): \emph{feature extraction} es suficiente.
-  \item Dataset pequeño pero dominio distinto (imágenes médicas, satelitales): combinar \emph{feature extraction} primero y luego \emph{fine-tuning} de las últimas capas.
-  \item Dataset grande ($\sim 10^4$ imágenes o más): \emph{fine-tuning} completo puede ofrecer mejor desempeño que feature extraction.
-\end{itemize}
-
+Este es precisamente el límite que motiva la \textbf{Guía 2}. En lugar
+de aprender todos los filtros desde cero, se parte de una red ya
+entrenada sobre millones de imágenes y se reutiliza su conocimiento ---el
+\emph{aprendizaje por transferencia} (\emph{transfer learning})---, lo
+que permite obtener clasificadores robustos con apenas unos cientos de
+imágenes por clase. Sobre esa técnica se construye el sistema de control
+de calidad industrial de la segunda parte del laboratorio.
 
 % =============================================================================
 \section{Anexos}

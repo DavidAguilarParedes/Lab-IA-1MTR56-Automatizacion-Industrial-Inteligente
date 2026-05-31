@@ -22,12 +22,14 @@
 \section{Introducción}
 
 Esta guía constituye la \textbf{segunda parte} del laboratorio combinado
-de Inteligencia Artificial y Visión por Computadora. Su componente es
-sumativo (70\,\% de la nota total del laboratorio).
+de Inteligencia Artificial y Visión por Computadora, y aporta
+\textbf{10 puntos} a la nota total del laboratorio (sobre 20).
 
 Partiendo de los fundamentos teóricos desarrollados en la Guía 1
-(arquitectura de las CNN, proceso de entrenamiento, preprocesamiento y
-aprendizaje por transferencia), en esta guía se construirá un
+(arquitectura de las CNN, proceso de entrenamiento, evaluación y
+preprocesamiento), en esta guía se introduce el \emph{aprendizaje por
+transferencia} como solución a las limitaciones del entrenamiento desde
+cero y se construye un
 \textbf{sistema completo de control de calidad por visión por
 computadora}: una pareja de estudiantes capturará su propio dataset de
 tapitas de tres colores, entrenará un modelo basado en MobileNetV2
@@ -49,7 +51,6 @@ para disparar la acción de un brazo robótico colaborativo.
 \begin{itemize}
   \item Arquitectura de una red neuronal convolucional.
   \item Proceso de entrenamiento y evaluación de modelos.
-  \item Concepto de aprendizaje por transferencia y MobileNetV2.
   \item Preprocesamiento, aumentación de datos y regularización.
 \end{itemize}
 
@@ -262,13 +263,90 @@ sesiones de captura distintas), no simplemente un subconjunto
 aleatorio de los mismos frames consecutivos.
 
 % =============================================================================
+\section{Aprendizaje por transferencia}\label{sec:tl-concepto}
+
+\subsection{Motivación}
+
+Como se constató al cierre de la Guía 1, entrenar una CNN desde cero
+requiere típicamente conjuntos de datos muy grandes (decenas o cientos
+de miles de imágenes) y tiempo considerable de cómputo. Cuando el
+problema de interés cuenta con un dataset reducido ---decenas o pocos
+cientos de imágenes por clase, como las tapitas capturadas por la
+pareja--- una CNN entrenada desde cero tiende a sobreajustar y a
+generalizar pobremente, incluso aplicando aumentación de datos.
+
+El \textbf{aprendizaje por transferencia} (\emph{transfer learning})
+explota la observación de que las primeras capas de una CNN aprenden
+detectores de bordes, texturas y patrones de bajo nivel que son
+\emph{universales}: útiles no solo para la tarea original sobre la que
+la red fue entrenada, sino para casi cualquier tarea de visión por
+computadora. La estrategia consiste en partir de una CNN ya entrenada
+sobre un dataset masivo (típicamente \emph{ImageNet}, con
+$\approx 1.3$ millones de imágenes en 1000 clases) y \emph{reutilizar}
+sus capas como extractor de características para nuestro problema
+particular (Figura~\ref{fig:tl}).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{../docs/assets/g2/transfer_learning.png}
+\caption{Esquema de aprendizaje por transferencia. El \emph{backbone} pre-entrenado actúa como extractor universal de características; el cabezal nuevo se entrena para especializar la red al problema específico (aquí, la clasificación de tapitas por color). Fuente: elaboración propia.}
+\label{fig:tl}
+\end{figure}
+
+\subsection{MobileNetV2 como backbone}
+
+\textbf{MobileNetV2} es una arquitectura propuesta por Sandler et al.
+(Google, 2018) diseñada específicamente para dispositivos con recursos
+limitados (móviles, sistemas embebidos, computadoras industriales). Sus
+características principales son:
+
+\begin{itemize}
+  \item Aproximadamente $3.5$ millones de parámetros (frente a $\sim 60$ millones de VGG-16 o $\sim 25$ millones de ResNet-50).
+  \item Tamaño en disco $\approx 14$ MB, ejecutable en CPU sin GPU.
+  \item Bloques con conexiones residuales invertidas y convoluciones \emph{depthwise separable}, que reducen drásticamente el cómputo respecto a CNN tradicionales.
+  \item Entrada estándar de $224 \times 224 \times 3$ píxeles.
+  \item Pesos pre-entrenados sobre ImageNet, disponibles directamente desde el módulo \texttt{keras.applications}.
+\end{itemize}
+
+Esta combinación de tamaño compacto y desempeño competitivo la convierte
+en el \emph{backbone} preferido para sistemas de control de calidad
+embebidos, como el que se implementa en esta guía.
+
+\subsection{Feature extraction y fine-tuning}
+
+Existen dos modalidades principales de aprendizaje por transferencia,
+que en este laboratorio se aplican de forma secuencial:
+
+\paragraph{1. Feature extraction (extracción de características).} Se
+congelan todos los pesos del backbone pre-entrenado (no se actualizan
+durante el entrenamiento) y únicamente se entrena un nuevo cabezal de
+clasificación adaptado al problema específico. El backbone actúa como
+un extractor de características fijo. Es la modalidad más rápida y la
+recomendada como primer paso.
+
+\paragraph{2. Fine-tuning (ajuste fino).} Tras completar la fase
+anterior, se descongelan los últimos bloques del backbone (típicamente
+las capas más profundas, las que codifican características de alto
+nivel) y se continúa el entrenamiento con una tasa de aprendizaje
+\emph{muy pequeña} (del orden de $10^{-5}$). Esto permite que esas capas
+se especialicen ligeramente al dominio del problema sin destruir el
+conocimiento general adquirido.
+
+\paragraph{Cuándo usar cada modalidad.} En general:
+\begin{itemize}
+  \item Dataset pequeño y muy similar al dominio original (e.g., otra tarea de objetos cotidianos): \emph{feature extraction} suele ser suficiente.
+  \item Dataset pequeño pero dominio distinto (imágenes médicas, satelitales): combinar \emph{feature extraction} primero y luego \emph{fine-tuning} de las últimas capas.
+  \item Dataset grande ($\sim 10^4$ imágenes o más): \emph{fine-tuning} completo puede ofrecer mejor desempeño.
+\end{itemize}
+
+% =============================================================================
 \section{Entrenamiento con Transfer Learning}\label{sec:tl-practico}
 
 En esta sección se desarrolla la implementación práctica del
-aprendizaje por transferencia introducido conceptualmente en la
-Guía 1. La estrategia se divide en dos fases: \emph{feature extraction}
-con el backbone congelado, seguida de \emph{fine-tuning} de las
-últimas capas.
+aprendizaje por transferencia presentado en la sección anterior
+(Sección~\ref{sec:tl-concepto}). La estrategia se divide en dos fases:
+\emph{feature extraction} con el backbone congelado, seguida de
+\emph{fine-tuning} de las últimas capas.
 
 \subsection{Generadores con aumentación de datos}
 
@@ -562,9 +640,13 @@ comunicación con el IPC Beckhoff y demostración con el brazo. El trabajo
 práctico se apoya en los notebooks \texttt{proyecto/entrenar.ipynb}
 (construcción y entrenamiento del modelo) y
 \texttt{proyecto/probar\_modelo.ipynb} (prueba con cámara en vivo), junto
-con los scripts de comunicación \texttt{pyads}. Cada notebook explica sus
-celdas en detalle; la presente sección describe qué se realiza en cada
-actividad y su peso en la evaluación. La rúbrica completa se encuentra en
+con los scripts de comunicación \texttt{pyads}. Al igual que en la
+Guía~1, la pareja debe \textbf{ejecutar cada notebook de principio a
+fin, completar todas las celdas marcadas como \emph{«completar»} y
+responder por escrito las preguntas conceptuales} que aparecen
+intercaladas. Cada notebook explica sus celdas en detalle; la presente
+sección describe qué se realiza en cada actividad y su peso en la
+evaluación. La rúbrica completa se encuentra en
 la \emph{Ficha de Evaluación} del laboratorio: la Guía~2 aporta
 \textbf{10 puntos} que, sumados a los 10 de la Guía~1, conforman la nota
 del laboratorio sobre 20.
