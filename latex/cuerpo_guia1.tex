@@ -107,10 +107,9 @@ la arquitectura.
 % =============================================================================
 \section{Experiencia guiada}\label{sec:guiada}
 
-El trabajo se desarrolla en tres notebooks que la pareja ejecuta y completa. La
-indicación es la misma para todos: \textbf{ejecutar el notebook de principio a fin,
-completar las celdas marcadas como \emph{«completar»} y responder por escrito las
-preguntas conceptuales}. Como los notebooks ya vienen implementados, \textbf{la nota
+El trabajo se desarrolla en tres notebooks que se ejecutan y completan de principio a fin,
+llenando las celdas marcadas como \emph{«completar»} y respondiendo por escrito las
+preguntas conceptuales. Como los notebooks ya vienen implementados, \textbf{la nota
 evalúa la comprensión}: las respuestas a las preguntas conceptuales y la interpretación y
 justificación de los resultados, no la simple ejecución. La rúbrica completa está en la
 \emph{Ficha de Evaluación}: la Parte~1 aporta \textbf{10 puntos} y la Parte~2 otros 10,
@@ -157,7 +156,7 @@ sobre imágenes propias (Figuras~\ref{fig:curvas} y~\ref{fig:confmat}).
   & Definir y compilar la CNN, entrenar y analizar las curvas de \emph{loss}/\emph{accuracy} y la matriz de confusión sobre validación.
   & 1.5 \\
 2. Evaluación con datos propios \newline (sección 7)
-  & Clasificar cuatro fotografías capturadas por la pareja en condiciones variadas e identificar aciertos y fallos.
+  & Clasificar cuatro fotografías propias en condiciones variadas e identificar aciertos y fallos.
   & 1.5 \\
 \bottomrule
 \end{tabularx}
@@ -166,14 +165,14 @@ sobre imágenes propias (Figuras~\ref{fig:curvas} y~\ref{fig:confmat}).
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.82\textwidth]{../docs/assets/g1/g1_fig12_training_curves.png}
-\caption{Curvas de aprendizaje esperadas sobre el dataset de botellas. Fuente: elaboración propia.}
+\caption{Ejemplo de curvas de aprendizaje sobre el dataset de botellas (resultado ilustrativo). Fuente: elaboración propia.}
 \label{fig:curvas}
 \end{figure}
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.45\textwidth]{../docs/assets/g1/g1_fig11_confmat.png}
-\caption{Matriz de confusión sobre validación: la diagonal son aciertos. Fuente: elaboración propia.}
+\caption{Ejemplo de matriz de confusión sobre validación (resultado ilustrativo); la diagonal son aciertos. Fuente: elaboración propia.}
 \label{fig:confmat}
 \end{figure}
 
@@ -198,8 +197,8 @@ reentrena y compara el desempeño frente al modelo sin aumentar.
 \subsection{Notebook 3: clasificador de tapitas}
 
 Introduce un dataset propio: tapitas de colores (\textbf{rojo}, \textbf{azul},
-\textbf{amarillo}) más una clase \texttt{fondo} (imágenes sin tapita). La pareja graba un
-video corto por color, el notebook extrae los \emph{frames} a \texttt{data/tapitas/<clase>/}
+\textbf{amarillo}) más una clase \texttt{fondo} (imágenes sin tapita). Se graba un video
+corto por color; el notebook extrae los \emph{frames} a \texttt{data/tapitas/<clase>/}
 (descartando los borrosos), divide en \emph{train}/\emph{validation} y entrena una CNN desde
 cero. El modelo se exporta a \texttt{modelos/} para reutilizarlo en la Parte~2.
 
@@ -223,9 +222,9 @@ cero. El modelo se exporta a \texttt{modelos/} para reutilizarlo en la Parte~2.
 
 \subsection{Cierre: discusión crítica}
 
-A partir de los resultados, la pareja formula al menos dos hipótesis técnicas sobre las
-causas de los errores (sesgos del dataset, sensibilidad a la iluminación, límites de la
-arquitectura) y propone dos estrategias de mejora sin cambiar la arquitectura. Se
+A partir de los resultados se plantean al menos dos hipótesis técnicas sobre las causas de
+los errores (sesgos del dataset, sensibilidad a la iluminación, límites de la arquitectura)
+y se proponen dos estrategias de mejora sin cambiar la arquitectura. Esta discusión se
 documenta en la Ficha de Evaluación (\textbf{1.5 puntos}).
 
 \begin{center}

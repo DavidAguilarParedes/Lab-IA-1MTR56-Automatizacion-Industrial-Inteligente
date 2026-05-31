@@ -119,32 +119,30 @@ Notebooks \texttt{parte2\_vision/notebook4\_transfer\_learning.ipynb}, \texttt{n
 \textbf{Sección} & \textbf{Criterio de evaluación} & \textbf{Puntaje} \\
 \midrule
 
-\multicolumn{3}{@{}l}{\textbf{Actividad 1. Entrenamiento --- feature extraction}} \\
-& Adjuntar \texttt{model.summary()} mostrando el \emph{backbone} congelado y el cabezal entrenable (parámetros entrenables vs. no entrenables). & 0.5 pt \\
-& Adjuntar las curvas de \emph{loss}/\emph{accuracy} y comentar su forma. & 1.0 pt \\
-& Adjuntar la matriz de confusión 4$\times$4 sobre validación (accuracy global y por clase, incluyendo \texttt{fondo}) y plantear una hipótesis técnica sobre la clase que más se confunde. & 1.5 pts \\
+\multicolumn{3}{@{}l}{\textbf{Actividad 1. Entrenamiento por transferencia} (interpretación)} \\
+& Adjuntar las curvas de \emph{feature extraction} y \emph{fine-tuning} y reportar la mejora en validación. & 1.0 pt \\
+& Adjuntar la matriz de confusión 4$\times$4 (incluyendo \texttt{fondo}), plantear una hipótesis sobre la clase que más se confunde y comparar el desempeño con la CNN del Notebook~3. & 1.0 pt \\
 
 \midrule
-\multicolumn{3}{@{}l}{\textbf{Actividad 2. Fine-tuning}} \\
-& Documentar la estrategia de descongelamiento (cuántos \emph{layers} y por qué) y adjuntar el código modificado. & 0.5 pt \\
-& Adjuntar curvas comparativas entre \emph{feature extraction} y \emph{fine-tuning} y reportar la mejora en validación. & 1.0 pt \\
-& Discutir el rol del \emph{learning rate} pequeño en \emph{fine-tuning}. & 0.5 pt \\
+\multicolumn{3}{@{}l}{\textbf{Actividad 2. Comunicación con Beckhoff} (ADS + HMI)} \\
+& Adjuntar captura de la GVL \texttt{VARIABLES} con las tres BOOL y del HMI con una lámpara por color. & 0.5 pt \\
+& Evidenciar el envío de booleanos desde Python: cada lámpara se enciende al escribir su variable (\emph{watchpoint} o HMI). & 1.5 pts \\
+& Explicar el contrato de comunicación (umbral de confianza y exclusión mutua entre las tres BOOL). & 0.5 pt \\
 
 \midrule
-\multicolumn{3}{@{}l}{\textbf{Actividad 3. Conexión ADS y HMI con Beckhoff}} \\
-& Adjuntar captura de la GVL \texttt{VARIABLES} con las tres BOOL declaradas y del HMI construido en TwinCAT con una lámpara por color. & 0.5 pt \\
-& Adjuntar captura mostrando el cambio al ejecutar el script Python (\emph{watchpoint} o la lámpara del HMI encendiéndose). & 1.0 pt \\
-& Discutir el contrato de comunicación (umbral de confianza y mutua exclusión entre las tres BOOL). & 0.5 pt \\
+\multicolumn{3}{@{}l}{\textbf{Actividad 3. Predicción de una imagen $\to$ PLC}} \\
+& Clasificar una imagen cargada y enviar el color detectado al PLC (adjuntar evidencia). & 1.0 pt \\
+& Explicar el rol del umbral de confianza y qué ocurre con la clase \texttt{fondo}. & 1.0 pt \\
 
 \midrule
-\multicolumn{3}{@{}l}{\textbf{Actividad 4. Demostración integrada}} \\
-& Video corto (máx. 1 min): cámara $\to$ predicción $\to$ activación de BOOL $\to$ acción del brazo, con una toma por color. & 1.0 pt \\
-& Reportar aciertos sobre intentos en cada color (mínimo 5 intentos por color). & 1.0 pt \\
-& Identificar al menos dos fuentes de error en operación real y proponer mitigaciones. & 0.5 pt \\
+\multicolumn{3}{@{}l}{\textbf{Actividad 4. Inferencia en tiempo real $\to$ PLC}} \\
+& Video (máx. 1 min): cámara en vivo $\to$ predicción $\to$ activación del BOOL $\to$ acción del brazo, una toma por color. & 1.5 pts \\
+& Reportar aciertos sobre intentos en cada color (mínimo 5 por color). & 1.0 pt \\
+& Identificar dos fuentes de error en operación real y proponer mitigaciones. & 0.5 pt \\
 
 \midrule
 \multicolumn{3}{@{}l}{\textbf{Actividad 5. Discusión final}} \\
-& Reflexión: ¿cómo aplicarán o adaptarán este sistema en su proyecto integrador de automatización de línea de producción? & 0.5 pt \\
+& Reflexión: ¿cómo aplicarán o adaptarán este sistema en su proyecto integrador de automatización? & 0.5 pt \\
 
 \midrule
 \textbf{Subtotal Guía 2} & & \textbf{10 pts} \\
