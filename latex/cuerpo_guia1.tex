@@ -39,23 +39,12 @@ print(tf.__version__)     # 2.20.0
 
 \section{Redes neuronales convolucionales}
 
-Una CNN aprende a extraer características visuales directamente de los píxeles, sin
-ingeniería manual de \emph{features}. Se compone de tres tipos de capas
-(Figura~\ref{fig:cnn}):
-
-\begin{itemize}
-  \item \textbf{Convolución} (\texttt{Conv2D}): aplica filtros que se deslizan sobre la
-        imagen y detectan patrones locales ---bordes, texturas, formas---. Los filtros
-        se aprenden durante el entrenamiento (Figura~\ref{fig:conv}).
-  \item \textbf{Pooling} (\texttt{MaxPooling2D}): reduce la resolución conservando la
-        información dominante, lo que aporta robustez y disminuye el cómputo
-        (Figura~\ref{fig:pool}).
-  \item \textbf{Capas densas} (\texttt{Dense}): combinan las características extraídas; la
-        capa de salida usa \emph{softmax} para producir una probabilidad por clase.
-\end{itemize}
-
-La función de activación \emph{ReLU} introduce la no linealidad entre capas; sin ella la
-red colapsaría a una única transformación lineal (Figura~\ref{fig:act}).
+Una CNN clasifica imágenes aprendiendo, capa por capa, a transformar los píxeles en
+características cada vez más abstractas hasta producir una probabilidad por clase. A
+diferencia de los métodos clásicos, no se diseñan los descriptores a mano: la red los
+aprende sola durante el entrenamiento. Una arquitectura típica (Figura~\ref{fig:cnn})
+alterna bloques de \emph{convolución} y \emph{pooling} ---que extraen características---
+seguidos de \emph{capas densas} que clasifican.
 
 \begin{figure}[h]
 \centering
@@ -64,6 +53,26 @@ red colapsaría a una única transformación lineal (Figura~\ref{fig:act}).
 \label{fig:cnn}
 \end{figure}
 
+\subsection{Capa convolucional}
+
+La convolución desliza pequeños \emph{filtros} (o \emph{kernels}, p.\,ej. $3\times3$) sobre
+la imagen; en cada posición calcula un producto entre el filtro y la región que cubre,
+generando un \emph{mapa de características} que resalta dónde aparece ese patrón
+(Figura~\ref{fig:conv}). Los valores de los filtros son los parámetros que la red aprende.
+Tres hiperparámetros gobiernan la operación:
+
+\begin{itemize}
+  \item \textbf{Tamaño del kernel}: la ventana del filtro ($3\times3$ es lo más común);
+        kernels mayores capturan patrones más extensos a mayor costo.
+  \item \textbf{Stride (paso)}: cuántos píxeles se desplaza el filtro. Stride 1 conserva la
+        resolución; stride 2 la reduce a la mitad.
+  \item \textbf{Padding (relleno)}: añadir ceros en el borde. Con \texttt{padding='same'} la
+        salida mantiene el tamaño de entrada; con \texttt{'valid'} se encoge.
+\end{itemize}
+
+Cada capa usa \emph{varios} filtros (32, 64, 128\ldots): las primeras detectan bordes y
+texturas; las profundas, combinaciones más complejas (formas, partes de objetos).
+
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\textwidth]{../docs/assets/g1/g1_fig05_convolution.png}
@@ -71,12 +80,12 @@ red colapsaría a una única transformación lineal (Figura~\ref{fig:act}).
 \label{fig:conv}
 \end{figure}
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.78\textwidth]{../docs/assets/g1/g1_fig07_pooling.png}
-\caption{Max pooling: cada región se resume por su valor máximo, reduciendo la resolución. Fuente: elaboración propia.}
-\label{fig:pool}
-\end{figure}
+\subsection{Función de activación}
+
+Tras cada convolución se aplica una activación no lineal. La más usada es \textbf{ReLU}
+($\max(0,x)$): es rápida, mitiga el desvanecimiento del gradiente y aporta la no linealidad
+sin la cual la red entera colapsaría a una sola transformación lineal. Sigmoid y tanh se
+reservan para casos específicos; la capa de salida usa \emph{softmax} (Figura~\ref{fig:act}).
 
 \begin{figure}[h]
 \centering
@@ -85,24 +94,79 @@ red colapsaría a una única transformación lineal (Figura~\ref{fig:act}).
 \label{fig:act}
 \end{figure}
 
-\section{Entrenamiento y evaluación}
+\subsection{Capa de pooling}
 
-El entrenamiento ajusta los filtros minimizando una \emph{función de pérdida}
-(\emph{categorical crossentropy} para clasificación multiclase) mediante
-\emph{backpropagation} y un optimizador (\emph{Adam} por defecto). El proceso se repite
-durante varias \emph{épocas} sobre lotes (\emph{batches}) de imágenes.
+El \emph{pooling} reduce la resolución de los mapas de características: baja el cómputo y
+aporta cierta invarianza a pequeños desplazamientos. Recorre el mapa en ventanas (típicamente
+$2\times2$) y resume cada una en un valor (Figura~\ref{fig:pool}). Hay dos tipos:
 
-El desempeño se mide sobre un conjunto de \textbf{validación} independiente. La
-\emph{accuracy} y la \textbf{matriz de confusión} revelan no solo cuánto acierta el
-modelo, sino dónde se confunde. Si la accuracy en entrenamiento es alta pero la de
-validación es baja, el modelo sufre \emph{overfitting}: memoriza en lugar de generalizar.
+\begin{itemize}
+  \item \textbf{Max pooling}: toma el \emph{máximo} de cada ventana. Conserva la respuesta
+        más fuerte ---la presencia del patrón--- y descarta el resto; es el más usado en
+        clasificación porque resalta las características dominantes.
+  \item \textbf{Average pooling}: toma el \emph{promedio} de la ventana. Suaviza y conserva
+        información de fondo; su variante \emph{Global Average Pooling} resume cada mapa
+        completo en un solo número al final de la red (lo usa MobileNetV2 en la Parte~2).
+\end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.78\textwidth]{../docs/assets/g1/g1_fig07_pooling.png}
+\caption{Max pooling: cada región se resume por su valor máximo, reduciendo la resolución. Fuente: elaboración propia.}
+\label{fig:pool}
+\end{figure}
+
+\subsection{Capas densas y salida}
+
+Tras los bloques convolucionales, las características se aplanan (\texttt{Flatten} o
+\emph{global pooling}) y pasan a una o más \textbf{capas densas} que combinan toda la
+información. La \textbf{capa de salida} tiene tantas neuronas como clases y usa
+\emph{softmax}, que convierte sus valores en probabilidades que suman 1; la clase predicha
+es la de mayor probabilidad, y ese valor es la \emph{confianza}.
+
+\section{Entrenamiento}
+
+Entrenar es ajustar los filtros y pesos para minimizar el error. Cada paso tiene tres fases:
+
+\begin{enumerate}
+  \item \textbf{Forward}: la imagen atraviesa la red y produce una predicción.
+  \item \textbf{Pérdida}: se compara con la etiqueta real. En clasificación multiclase se
+        usa \emph{categorical crossentropy}, que penaliza con fuerza predecir con alta
+        confianza la clase equivocada.
+  \item \textbf{Backpropagation}: se calcula cuánto aportó cada peso al error (gradiente) y
+        un \textbf{optimizador} (por defecto \emph{Adam}) los ajusta.
+\end{enumerate}
+
+Las imágenes no se procesan de una en una ni todas juntas, sino en \textbf{batches} (lotes,
+p.\,ej. 32 imágenes): la red predice el lote, promedia su pérdida y actualiza los pesos una
+vez. Un \emph{batch size} grande estabiliza el gradiente pero consume más memoria. Una
+\textbf{época} es una pasada completa por todo el dataset; se entrena por varias épocas. El
+\textbf{learning rate} fija el tamaño de cada ajuste: muy alto oscila, muy bajo es lento.
+
+\section{Evaluación y regularización}
+
+El modelo se evalúa sobre un conjunto de \textbf{validación} independiente. Dos métricas
+clave: la \textbf{accuracy} (proporción de aciertos) y la \textbf{matriz de confusión}, que
+muestra no solo cuánto acierta sino \emph{dónde} se confunde (qué clases mezcla).
+
+Si la accuracy de entrenamiento es alta pero la de validación es baja, hay
+\textbf{overfitting}: la red memoriza en vez de generalizar. Defensas habituales:
+
+\begin{itemize}
+  \item \textbf{Dropout}: durante el entrenamiento apaga al azar un porcentaje de neuronas,
+        forzando a la red a no depender de unas pocas.
+  \item \textbf{Batch normalization}: normaliza las activaciones de cada batch, lo que
+        estabiliza y acelera el entrenamiento.
+  \item \textbf{Data augmentation} (siguiente sección).
+\end{itemize}
 
 \section{Aumentación de datos}
 
 La \emph{data augmentation} genera variaciones de las imágenes de entrenamiento
----rotaciones, desplazamientos, cambios de brillo, zoom--- para que el modelo generalice
-mejor con pocos datos. Es la primera defensa contra el \emph{overfitting} sin modificar
-la arquitectura.
+---rotaciones, desplazamientos, cambios de brillo, zoom, volteos--- para que el modelo vea
+más diversidad y generalice mejor con pocos datos. Es la primera defensa contra el
+overfitting sin tocar la arquitectura, y se aplica \textbf{solo al entrenamiento}: la
+validación debe reflejar datos reales, sin alterar.
 
 % =============================================================================
 \section{Experiencia guiada}\label{sec:guiada}

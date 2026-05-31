@@ -10,27 +10,19 @@ Notebook~6); la librería \texttt{pyads}; y un proyecto TwinCAT con el IPC Beckh
 
 \section{Aprendizaje por transferencia}\label{sec:tl-concepto}
 
-Entrenar una CNN desde cero exige miles de imágenes por clase. El \emph{aprendizaje por
-transferencia} evita ese costo aprovechando una observación clave: las primeras capas de una
-CNN aprenden detectores \emph{genéricos} ---bordes, texturas, formas--- útiles para casi
-cualquier imagen, y solo las últimas capas son específicas de la tarea.
+\subsection{Motivación}
 
-Por eso se parte de \textbf{MobileNetV2}, una red ya entrenada sobre millones de imágenes
-(ImageNet): se conservan sus detectores genéricos ---el \emph{backbone}--- y solo se adapta
-la parte final a las clases de tapitas. Esa adaptación ocurre en dos fases
-(Figura~\ref{fig:transfer}):
+Entrenar una CNN desde cero exige miles de imágenes por clase y mucho cómputo; con un
+dataset pequeño, como el de tapitas, sobreajusta enseguida. El \emph{aprendizaje por
+transferencia} resuelve esto reutilizando una red ya entrenada sobre un dataset enorme.
 
-\begin{enumerate}
-  \item \textbf{Feature extraction}: se \emph{congela} el \emph{backbone} (sus pesos no
-        cambian) y se entrena solo un cabezal nuevo ---una capa densa \emph{softmax} con las
-        clases del problema---. Con pocas épocas se obtiene un buen clasificador.
-  \item \textbf{Fine-tuning}: se \emph{descongelan} las últimas capas del \emph{backbone} y
-        se reentrena con un \emph{learning rate} muy pequeño, para afinar las características
-        de alto nivel al dominio de las tapitas sin borrar lo aprendido en ImageNet.
-\end{enumerate}
+\subsection{Qué se transfiere}
 
-Así se obtiene un clasificador robusto con apenas unos cientos de imágenes por clase, muy
-por encima de lo que lograría la CNN desde cero del Notebook~3.
+Las primeras capas de una CNN aprenden detectores \emph{genéricos} ---bordes, texturas,
+colores--- útiles para casi cualquier imagen; solo las últimas son específicas de la tarea
+original. Por eso se conserva el cuerpo de la red ---el \emph{backbone}--- y se reemplaza
+únicamente la parte final por un clasificador para las clases del problema
+(Figura~\ref{fig:transfer}).
 
 \begin{figure}[h]
 \centering
@@ -38,6 +30,30 @@ por encima de lo que lograría la CNN desde cero del Notebook~3.
 \caption{Aprendizaje por transferencia: se reutiliza el \emph{backbone} preentrenado y se sustituye el clasificador final. Fuente: elaboración propia.}
 \label{fig:transfer}
 \end{figure}
+
+\subsection{MobileNetV2 como backbone}
+
+Se usa \textbf{MobileNetV2}, preentrenada sobre \textbf{ImageNet} (1.4 millones de imágenes,
+1000 clases). Es ligera (alrededor de 3.5 millones de parámetros) porque emplea
+\emph{convoluciones separables en profundidad}, que descomponen la convolución estándar en
+dos pasos más baratos. Esa eficiencia permite ejecutarla en CPU o equipos embebidos, como
+exige un sistema de control de calidad en planta.
+
+\subsection{Las dos fases}
+
+\begin{enumerate}
+  \item \textbf{Feature extraction}: se \emph{congela} el backbone (sus pesos no cambian) y
+        se entrena solo un cabezal nuevo ---un \emph{Global Average Pooling} seguido de una
+        capa densa \emph{softmax} con las clases de tapitas---. Es rápido y suele bastar.
+  \item \textbf{Fine-tuning}: se \emph{descongelan} las últimas capas del backbone y se
+        reentrena con un \emph{learning rate} muy pequeño. El LR bajo es crítico: uno grande
+        destruiría el conocimiento de ImageNet (\emph{olvido catastrófico}).
+\end{enumerate}
+
+Con muy pocos datos basta el \emph{feature extraction}; el \emph{fine-tuning} ayuda cuando el
+dominio (tapitas, iluminación industrial) difiere del de ImageNet, a cambio de más riesgo de
+sobreajuste. El resultado es un clasificador robusto con apenas unos cientos de imágenes por
+clase, muy por encima de la CNN desde cero del Notebook~3.
 
 \section{El dataset de tapitas}
 
@@ -176,6 +192,12 @@ interpretación de los resultados, no la simple ejecución. Por eso el entrenami
 casi automático--- pesa poco, y la comunicación real con Beckhoff y la inferencia en vivo
 pesan más. La Parte~2 aporta \textbf{10 puntos}.
 
+\textbf{El HMI en TwinCAT es obligatorio.} Cada pareja debe construir una visualización con
+una \textbf{lámpara por color} (\texttt{bRojo}, \texttt{bAzul}, \texttt{bAmarillo}): es ahí
+donde se demuestra, en tiempo real, la comunicación de las predicciones con el PLC ---cuando
+el clasificador detecta un color, su lámpara se enciende---. Sin el HMI no es posible
+evidenciar la Actividad~2 ni la demostración integrada.
+
 \renewcommand{\arraystretch}{1.35}
 \begin{tabularx}{\textwidth}{@{}p{5.3cm} X r@{}}
 \toprule
@@ -185,7 +207,7 @@ pesan más. La Parte~2 aporta \textbf{10 puntos}.
   & Entrenar (\emph{feature extraction} + \emph{fine-tuning}) e \textbf{interpretar} los resultados: comparar curvas y matriz de confusión y justificar la mejora frente a la CNN del Notebook~3. El entrenamiento es automático; se evalúa el análisis.
   & 2.0 \\
 2. Comunicación con Beckhoff \newline {\footnotesize(TwinCAT + \texttt{pyads}, NB6 etapa 3)}
-  & Declarar las tres BOOL en la GVL, construir el HMI con una lámpara por color y enviar valores booleanos desde Python (Script~\ref{lst:pyads-basic}); verificar el encendido de cada lámpara.
+  & Declarar las tres BOOL en la GVL, construir el HMI \textbf{(obligatorio)} con una lámpara por color y enviar valores booleanos desde Python (Script~\ref{lst:pyads-basic}); verificar el encendido de cada lámpara.
   & 2.5 \\
 3. Predicción de una imagen $\rightarrow$ PLC \newline {\footnotesize(\texttt{notebook6} etapa 4)}
   & Clasificar una imagen cargada y enviar el color detectado al PLC; explicar el rol del umbral de confianza y qué ocurre con la clase \texttt{fondo}.
