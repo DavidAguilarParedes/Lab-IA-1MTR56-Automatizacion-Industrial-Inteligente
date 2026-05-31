@@ -52,16 +52,20 @@ Si imprime la version (ej: `2.20.0`), todo esta listo.
 
 Abrir cualquier archivo `.ipynb` en VS Code y ejecutar las celdas.
 
-- `labs/` — Laboratorios guiados (seguir instrucciones del profesor)
-- `proyecto/entrenar.ipynb` — Entrenar su propio modelo
-- `proyecto/probar_modelo.ipynb` — Probar modelo interactivamente
+**Parte 1 — IA** (`parte1_ia/`):
+- `notebook1_cnn_desde_cero.ipynb` — CNN desde cero
+- `notebook2_data_augmentation.ipynb` — Data augmentation
+- `notebook3_clasificador_tapitas.ipynb` — Clasificador de tapitas (CNN, dataset propio)
 
-### HMI Industrial (Control de Calidad + PLC)
+**Parte 2 — Visión** (`parte2_vision/`):
+- `notebook4_transfer_learning.ipynb` — Entrenar con Transfer Learning (MobileNetV2)
+- `notebook5_probar_modelo.ipynb` — Probar modelo en vivo
+- `notebook6_envio_beckhoff.ipynb` — Enviar predicciones al PLC Beckhoff (ADS)
 
-En la terminal de VS Code:
-```
-python -m app.hmi
-```
+### Integración con Beckhoff (PLC)
+
+La demostración con el brazo se hace desde `notebook6_envio_beckhoff.ipynb`
+(cámara → predicción → 3 BOOLs por ADS). Requiere `pyads` y TwinCAT.
 
 1. Seleccionar modelo en el panel derecho y hacer clic en "Cargar"
 2. La camara muestra la prediccion en tiempo real

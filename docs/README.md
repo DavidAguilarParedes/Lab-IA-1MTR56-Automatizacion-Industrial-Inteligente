@@ -10,8 +10,8 @@ XeLaTeX.
 ```
 latex/
 ├── plantilla_pucp.tex     Estilos institucionales (fuentes, portada, header/footer)
-├── guia1.tex              Guía 1 — CNN, fundamentos (notebooks lab1 + lab2)
-├── guia2.tex              Guía 2 — Transfer Learning + Beckhoff (proyecto/entrenar + probar_modelo)
+├── guia1.tex              Guía 1 — CNN, fundamentos (parte1_ia/: notebooks 1 y 2)
+├── guia2.tex              Guía 2 — Transfer Learning + Beckhoff (parte2_vision/: notebooks 4, 5 y 6)
 └── fe_lab.tex             Ficha de Evaluación única del laboratorio (G1 /10 + G2 /10 = /20)
 
 docs/

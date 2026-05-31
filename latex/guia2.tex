@@ -637,10 +637,10 @@ finally:
 La experiencia integra todo el flujo del control de calidad inteligente:
 captura del dataset, entrenamiento por transferencia, validación,
 comunicación con el IPC Beckhoff y demostración con el brazo. El trabajo
-práctico se apoya en los notebooks \texttt{proyecto/entrenar.ipynb}
+práctico se apoya en los notebooks \texttt{parte2\_vision/notebook4\_transfer\_learning.ipynb}
 (construcción y entrenamiento del modelo) y
-\texttt{proyecto/probar\_modelo.ipynb} (prueba con cámara en vivo), junto
-con los scripts de comunicación \texttt{pyads}. Al igual que en la
+\texttt{parte2\_vision/notebook5\_probar\_modelo.ipynb} (prueba con cámara en vivo) y
+\texttt{parte2\_vision/notebook6\_envio\_beckhoff.ipynb} (envío de predicciones al IPC por \texttt{pyads}). Al igual que en la
 Guía~1, la pareja debe \textbf{ejecutar cada notebook de principio a
 fin, completar todas las celdas marcadas como \emph{«completar»} y
 responder por escrito las preguntas conceptuales} que aparecen
@@ -661,12 +661,12 @@ del laboratorio sobre 20.
     captura de la Sección~3, extraer los frames y organizarlos en
     \texttt{data/tapitas/}. Documentar el número de muestras por clase.
   & 1.5 \\
-2. Feature extraction \newline {\footnotesize(\texttt{entrenar.ipynb}, secc. 2--6)}
+2. Feature extraction \newline {\footnotesize(\texttt{notebook4\_transfer\_learning.ipynb}, secc. 2--6)}
   & Configurar los generadores con aumentación adecuada, construir el
     modelo con \emph{backbone} MobileNetV2 congelado, entrenar el cabezal
     y evaluar con curvas y matriz de confusión 3$\times$3.
   & 2.5 \\
-3. Fine-tuning \newline {\footnotesize(\texttt{entrenar.ipynb}, secc. 4--5)}
+3. Fine-tuning \newline {\footnotesize(\texttt{notebook4\_transfer\_learning.ipynb}, secc. 4--5)}
   & Descongelar los últimos \emph{layers} del \emph{backbone}, recompilar
     con un \emph{learning rate} pequeño y reentrenar; comparar el
     desempeño contra la fase anterior.
@@ -676,8 +676,8 @@ del laboratorio sobre 20.
     (Script~\ref{lst:pyads-basic}) y verificar los cambios en el
     \emph{watchpoint} de TwinCAT.
   & 2.0 \\
-5. Demostración integrada \newline {\footnotesize(\texttt{probar\_modelo.ipynb} + HMI + brazo)}
-  & Ejecutar el bucle de inferencia (Script~\ref{lst:loop}) con la cámara
+5. Demostración integrada \newline {\footnotesize(\texttt{notebook6\_envio\_beckhoff.ipynb} + brazo)}
+  & Ejecutar el bucle de inferencia del NB6 (Script~\ref{lst:loop}) con la cámara
     sobre el espacio de trabajo: cada color detectado activa su BOOL y
     dispara la acción correcta del brazo. Grabar un video de la
     demostración.

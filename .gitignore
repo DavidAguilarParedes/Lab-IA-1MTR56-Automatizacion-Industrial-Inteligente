@@ -17,15 +17,15 @@ data/tapitas_split/
 data/tapitas/*/
 
 # Modelos entrenados (cada alumno genera los suyos)
-# Los modelos en proyecto/modelos/ SI se commitean como ejemplo
+# Los modelos en modelos/ SI se commitean como ejemplo
 *.h5
 *.keras
-!proyecto/modelos/*.h5
-!proyecto/modelos/*.keras
-!proyecto/modelos/*.json
+!modelos/*.h5
+!modelos/*.keras
+!modelos/*.json
 modelo_arquitectura.png
 
-# Capturas del HMI
+# Capturas de la cámara (NB5/NB6)
 capturas/
 captura_*.jpg
 
@@ -36,6 +36,9 @@ captura_*.jpg
 .vscode/*
 !.vscode/settings.json
 .idea/
+
+# Claude Code (estado local de sesión)
+.claude/
 
 # Videos de tapitas grabados/subidos por el alumno
 data/videos_tapitas/

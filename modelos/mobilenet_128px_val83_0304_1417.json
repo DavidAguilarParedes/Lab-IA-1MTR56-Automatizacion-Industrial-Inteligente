@@ -1,0 +1,15 @@
+{
+  "class_names": [
+    "clase_1",
+    "fondo",
+    "rojo"
+  ],
+  "img_size": 128,
+  "preprocessing": "mobilenet",
+  "model_type": "mobilenet",
+  "dataset_dir": "../data/mi_dataset",
+  "val_accuracy": 0.84,
+  "train_accuracy": 0.8901,
+  "epochs": 17,
+  "timestamp": "2026-03-04 14:17"
+}
