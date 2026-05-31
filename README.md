@@ -64,13 +64,11 @@ Abrir cualquier archivo `.ipynb` en VS Code y ejecutar las celdas.
 
 ### Integración con Beckhoff (PLC)
 
-La demostración con el brazo se hace desde `notebook6_envio_beckhoff.ipynb`
-(cámara → predicción → 3 BOOLs por ADS). Requiere `pyads` y TwinCAT.
-
-1. Seleccionar modelo en el panel derecho y hacer clic en "Cargar"
-2. La camara muestra la prediccion en tiempo real
-3. "EJECUTAR INSPECCION" clasifica y envia resultado al PLC
-4. Para conectar al PLC: abrir "Config PLC" e ingresar AMS Net ID
+`notebook6_envio_beckhoff.ipynb` envía el resultado de la clasificación al IPC
+Beckhoff por ADS (librería `pyads`); las lámparas y la lógica del brazo se
+programan en TwinCAT. El notebook avanza en tres etapas: enviar variables
+booleanas para probar la comunicación, clasificar una imagen y enviarla, y
+clasificar en vivo con la cámara. Requiere `pyads`, TwinCAT y el AMS Net ID del IPC.
 
 ---
 
