@@ -166,101 +166,22 @@ Abdomen               & 110 & 140 \\
 \end{table}
 
 % =============================================================================
-\section{Captura y preparación del dataset de tapitas}
+\section{Reutilización del dataset de tapitas}
 
-A diferencia de la Guía 1, donde se utilizó un dataset provisto por
-el laboratorio, en esta guía cada pareja construye su propio dataset
-a partir de fotografías y videos capturados con sus dispositivos.
-Este ejercicio reproduce las condiciones reales de un proyecto de
-control de calidad industrial: el equipo de ingeniería debe definir
-el protocolo de adquisición, capturar las muestras, etiquetarlas y
-organizarlas.
+El dataset de tapitas se construyó en la \textbf{Guía 1 (Notebook 3)}: cada
+pareja grabó un video por color, extrajo los \emph{frames} y los organizó
+en \texttt{data/tapitas/} siguiendo la convención de
+\texttt{flow\_from\_directory} (subcarpetas por clase). En esta guía se
+\textbf{reutiliza ese mismo dataset}, ahora con aprendizaje por
+transferencia, para contrastar el desempeño frente a la CNN entrenada desde
+cero del Notebook~3.
 
-\subsection{Protocolo de captura}
-
-Para garantizar la calidad del dataset, se recomienda seguir las
-siguientes pautas durante la captura:
-
-\begin{itemize}
-  \item \textbf{Iluminación variada}: capturar muestras en distintas condiciones de luz (natural, artificial cálida, fría) para mejorar la robustez del modelo.
-  \item \textbf{Fondos múltiples}: variar el fondo entre la mesa del laboratorio, una hoja blanca, una hoja oscura, etc.
-  \item \textbf{Distancia y ángulo}: variar la distancia cámara--objeto entre 10 y 40 cm y el ángulo de captura.
-  \item \textbf{Cantidad mínima}: al menos \textbf{50 muestras por clase} para entrenamiento, considerando que la aumentación de datos multiplicará efectivamente este número.
-  \item \textbf{Una sola tapita por imagen}: no incluir múltiples tapitas en la misma fotografía (esto correspondería a una tarea de detección, no de clasificación).
-  \item \textbf{Formato}: imágenes en formato JPG o PNG, resolución mínima de 224$\times$224 píxeles.
-\end{itemize}
-
-\subsection{Extracción de frames a partir de video}
-
-Una forma eficiente de capturar muchas muestras en poco tiempo es
-grabar un video corto (15--30 segundos) por cada color, moviendo
-lentamente la tapita frente a la cámara para cubrir distintas
-posiciones y ángulos. Posteriormente se extraen los \emph{frames}
-mediante un script en Python con OpenCV
-(\textbf{Script~\ref{lst:frames}}).
-
-\begin{lstlisting}[language=Python, caption={Extracción de frames a partir de un video para construcción del dataset.}, label={lst:frames}]
-import cv2
-import os
-
-def extraer_frames(video_path, output_dir, cada_n_frames=5):
-    """Extrae un frame cada `cada_n_frames` del video y los guarda."""
-    os.makedirs(output_dir, exist_ok=True)
-    cap = cv2.VideoCapture(video_path)
-    frame_idx, guardados = 0, 0
-    while True:
-        ok, frame = cap.read()
-        if not ok:
-            break
-        if frame_idx % cada_n_frames == 0:
-            nombre = os.path.join(output_dir, f"frame_{guardados:04d}.jpg")
-            cv2.imwrite(nombre, frame)
-            guardados += 1
-        frame_idx += 1
-    cap.release()
-    print(f"Guardados {guardados} frames en {output_dir}")
-
-# Ejemplo de uso
-extraer_frames('videos/rojo.mp4',     'data/tapitas/train/rojo')
-extraer_frames('videos/azul.mp4',     'data/tapitas/train/azul')
-extraer_frames('videos/amarillo.mp4', 'data/tapitas/train/amarillo')
-\end{lstlisting}
-
-\subsection{Organización del dataset}
-
-El dataset se organiza siguiendo la convención de \texttt{flow\_from\_directory}
-de Keras, con subcarpetas por clase dentro de \texttt{train/} y
-\texttt{validation/}. Recordando del Anexo del notebook de la Guía 1,
-las etiquetas se asignan automáticamente en orden alfabético, por lo
-que el diccionario será \texttt{\{`amarillo': 0, `azul': 1, `rojo': 2\}}.
-
-\begin{center}
-\begin{tikzpicture}[
-  every node/.style={font=\footnotesize\ttfamily},
-  level distance=8mm,
-  level 1/.style={sibling distance=40mm},
-  level 2/.style={sibling distance=15mm},
-]
-\node {data/tapitas/}
-  child { node {train/}
-    child { node {amarillo/} }
-    child { node {azul/} }
-    child { node {rojo/} }
-  }
-  child { node {validation/}
-    child { node {amarillo/} }
-    child { node {azul/} }
-    child { node {rojo/} }
-  };
-\end{tikzpicture}
-\end{center}
-
-\paragraph{División train/validation.} Se recomienda destinar el
-80\,\% de las muestras a entrenamiento y el 20\,\% restante a
-validación. Es importante que las muestras de validación sean
-\emph{independientes} de las de entrenamiento (provenir de videos o
-sesiones de captura distintas), no simplemente un subconjunto
-aleatorio de los mismos frames consecutivos.
+Si el dataset resultó escaso o poco variado, esta es una buena oportunidad
+para ampliarlo: añadir muestras con mayor variación de iluminación, fondo y
+ángulo mejora la robustez del modelo. Se mantiene la división 80\,\%
+entrenamiento / 20\,\% validación, procurando que las muestras de validación
+sean \emph{independientes} (de videos o sesiones de captura distintas), no
+frames consecutivos del mismo video.
 
 % =============================================================================
 \section{Aprendizaje por transferencia}\label{sec:tl-concepto}
@@ -635,7 +556,7 @@ finally:
 \section{Experiencia guiada}
 
 La experiencia integra todo el flujo del control de calidad inteligente:
-captura del dataset, entrenamiento por transferencia, validación,
+reutilización del dataset de tapitas (Guía 1), entrenamiento por transferencia, validación,
 comunicación con el IPC Beckhoff y demostración con el brazo. El trabajo
 práctico se apoya en los notebooks \texttt{parte2\_vision/notebook4\_transfer\_learning.ipynb}
 (construcción y entrenamiento del modelo) y
@@ -656,33 +577,29 @@ del laboratorio sobre 20.
 \toprule
 \textbf{Actividad (herramienta)} & \textbf{Qué se realiza} & \textbf{Puntos} \\
 \midrule
-1. Construcción del dataset \newline {\footnotesize(script de extracción de frames)}
-  & Grabar tres videos ---uno por color--- siguiendo el protocolo de
-    captura de la Sección~3, extraer los frames y organizarlos en
-    \texttt{data/tapitas/}. Documentar el número de muestras por clase.
-  & 1.5 \\
-2. Feature extraction \newline {\footnotesize(\texttt{notebook4\_transfer\_learning.ipynb}, secc. 2--6)}
-  & Configurar los generadores con aumentación adecuada, construir el
-    modelo con \emph{backbone} MobileNetV2 congelado, entrenar el cabezal
-    y evaluar con curvas y matriz de confusión 3$\times$3.
-  & 2.5 \\
-3. Fine-tuning \newline {\footnotesize(\texttt{notebook4\_transfer\_learning.ipynb}, secc. 4--5)}
+1. Feature extraction \newline {\footnotesize(\texttt{notebook4\_transfer\_learning.ipynb}, secc. 2--6)}
+  & Reutilizar el dataset de tapitas de la Guía~1, configurar los
+    generadores con aumentación adecuada, construir el modelo con
+    \emph{backbone} MobileNetV2 congelado, entrenar el cabezal y evaluar
+    con curvas y matriz de confusión.
+  & 3.0 \\
+2. Fine-tuning \newline {\footnotesize(\texttt{notebook4\_transfer\_learning.ipynb}, secc. 4--5)}
   & Descongelar los últimos \emph{layers} del \emph{backbone}, recompilar
     con un \emph{learning rate} pequeño y reentrenar; comparar el
-    desempeño contra la fase anterior.
-  & 1.5 \\
-4. Conexión ADS \newline {\footnotesize(TwinCAT + \texttt{pyads})}
+    desempeño contra la fase anterior y contra la CNN del Notebook~3.
+  & 2.0 \\
+3. Conexión ADS \newline {\footnotesize(TwinCAT + \texttt{pyads})}
   & Declarar las tres variables BOOL en la GVL, escribirlas desde Python
     (Script~\ref{lst:pyads-basic}) y verificar los cambios en el
     \emph{watchpoint} de TwinCAT.
   & 2.0 \\
-5. Demostración integrada \newline {\footnotesize(\texttt{notebook6\_envio\_beckhoff.ipynb} + brazo)}
+4. Demostración integrada \newline {\footnotesize(\texttt{notebook6\_envio\_beckhoff.ipynb} + brazo)}
   & Ejecutar el bucle de inferencia del NB6 (Script~\ref{lst:loop}) con la cámara
     sobre el espacio de trabajo: cada color detectado activa su BOOL y
     dispara la acción correcta del brazo. Grabar un video de la
     demostración.
-  & 2.0 \\
-6. Discusión final
+  & 2.5 \\
+5. Discusión final
   & Reflexionar sobre cómo aplicar o adaptar el sistema en el proyecto
     integrador de automatización de línea de producción.
   & 0.5 \\

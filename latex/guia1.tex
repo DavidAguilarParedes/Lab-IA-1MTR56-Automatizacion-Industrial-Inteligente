@@ -55,7 +55,8 @@ con un controlador industrial Beckhoff vía el protocolo ADS.
 \begin{itemize}
   \item Computadora con Python 3.10 o superior y entorno virtual del laboratorio activo.
   \item Dataset de botellas (vidrio y plástico), provisto en \texttt{data/botellas/}.
-  \item Notebooks de trabajo \texttt{parte1\_ia/notebook1\_cnn\_desde\_cero.ipynb} y \texttt{parte1\_ia/notebook2\_data\_augmentation.ipynb}.
+  \item Dataset de tapitas de colores, capturado por la propia pareja (Notebook 3).
+  \item Notebooks de trabajo \texttt{parte1\_ia/notebook1\_cnn\_desde\_cero.ipynb}, \texttt{parte1\_ia/notebook2\_data\_augmentation.ipynb} y \texttt{parte1\_ia/notebook3\_clasificador\_tapitas.ipynb}.
   \item Librerías \texttt{tensorflow}, \texttt{numpy}, \texttt{matplotlib}, \texttt{seaborn}.
 \end{itemize}
 
@@ -565,7 +566,7 @@ entre $0.3$ y $0.5$. En las capas convolucionales se utilizan tasas más
 pequeñas, entre $0.1$ y $0.25$.
 
 % =============================================================================
-\section{Experiencia guiada: clasificador de botellas}\label{sec:guiada}
+\section{Experiencia guiada}\label{sec:guiada}
 
 En esta experiencia se construye una CNN para clasificar imágenes de
 botellas en dos categorías ---\textbf{vidrio} y \textbf{plástico}--- con
@@ -634,11 +635,11 @@ y la matriz de confusión esperadas al concluir el entrenamiento.
 1. Arquitectura y entrenamiento \newline (secciones 3--6)
   & Definir y compilar la CNN, entrenar y analizar las curvas de
     \emph{loss}/\emph{accuracy} y la matriz de confusión sobre validación.
-  & 2.5 \\
+  & 1.5 \\
 2. Evaluación con datos propios \newline (sección 7)
   & Clasificar cuatro fotografías capturadas por la pareja en
     condiciones variadas e identificar aciertos y fallos del modelo.
-  & 2.0 \\
+  & 1.5 \\
 \bottomrule
 \end{tabularx}
 \renewcommand{\arraystretch}{1}
@@ -674,7 +675,60 @@ y compara el desempeño frente al modelo sin aumentar.
   & Diagnosticar el \emph{overfitting} del modelo base, seleccionar
     transformaciones justificadas, reentrenar y comparar las curvas
     frente al modelo base.
-  & 3.5 \\
+  & 2.5 \\
+\bottomrule
+\end{tabularx}
+\renewcommand{\arraystretch}{1}
+
+\subsection{Construcción del dataset propio: tapitas}
+
+A diferencia de los Notebooks 1 y 2, que emplean el dataset de botellas
+provisto, el \textbf{Notebook 3} introduce un dataset construido por la
+propia pareja: tapitas de colores (\textbf{rojo}, \textbf{azul},
+\textbf{amarillo}) más una clase \texttt{fondo}. Este ejercicio reproduce
+las condiciones reales de un proyecto de control de calidad industrial: el
+equipo define el protocolo de adquisición, captura las muestras y las
+organiza. El mismo dataset se reutilizará en la Guía~2 con aprendizaje por
+transferencia.
+
+\paragraph{Protocolo de captura.} Para garantizar la calidad del dataset:
+\begin{itemize}
+  \item \textbf{Iluminación variada}: capturar en distintas condiciones de luz (natural, artificial cálida, fría).
+  \item \textbf{Fondos múltiples}: variar el fondo (mesa del laboratorio, hoja blanca, hoja oscura).
+  \item \textbf{Distancia y ángulo}: variar la distancia cámara--objeto (10--40 cm) y el ángulo.
+  \item \textbf{Cantidad mínima}: al menos 50 muestras por clase, considerando que la aumentación multiplicará este número.
+  \item \textbf{Una sola tapita por imagen}: no incluir varias tapitas (eso sería detección, no clasificación).
+\end{itemize}
+
+\paragraph{Extracción de frames.} Una forma eficiente de obtener muchas
+muestras es grabar un video corto (15--30 s) por color y extraer los
+\emph{frames}. El Notebook 3 realiza esta extracción de forma interactiva
+(grabación o subida del video $\to$ \texttt{data/tapitas/<clase>/}) y
+descarta automáticamente los frames borrosos. Las etiquetas se asignan en
+orden alfabético siguiendo la convención de \texttt{flow\_from\_directory}.
+
+\subsection{Notebook 3 --- \texttt{notebook3\_clasificador\_tapitas.ipynb}}
+
+Aplica el flujo de los Notebooks 1 y 2 al dataset propio de tapitas: a
+partir de los videos extrae los frames, divide en \emph{train}/\emph{validation},
+entrena una CNN desde cero (misma familia de arquitectura) y la evalúa. El
+modelo se exporta a \texttt{modelos/} para reutilizarlo en la Guía~2. El
+resultado ---bueno en validación, pero limitado ante condiciones nuevas---
+es el punto de partida que motiva el aprendizaje por transferencia.
+
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\textwidth}{@{}p{6.2cm} X r@{}}
+\toprule
+\textbf{Etapa (pasos del notebook)} & \textbf{Qué se realiza} & \textbf{Puntos} \\
+\midrule
+4. Captura y preparación del dataset \newline (pasos 1--2)
+  & Grabar/subir un video por color, extraer los frames a
+    \texttt{data/tapitas/} y reportar el conteo por clase.
+  & 1.0 \\
+5. Entrenamiento y evaluación CNN \newline (pasos 3--4)
+  & Dividir \emph{train}/\emph{validation}, entrenar la CNN desde cero,
+    analizar curvas y matriz de confusión, y exportar el modelo.
+  & 2.0 \\
 \bottomrule
 \end{tabularx}
 \renewcommand{\arraystretch}{1}
@@ -695,9 +749,10 @@ transferencia que se aborda en la Guía~2.
 \toprule
 \textbf{Distribución de la nota de la Guía 1} & \textbf{Puntos} \\
 \midrule
-Notebook 1 --- \texttt{notebook1\_cnn\_desde\_cero.ipynb}        & 4.5 \\
-Notebook 2 --- \texttt{notebook2\_data\_augmentation.ipynb} & 3.5 \\
-Discusión crítica                                       & 2.0 \\
+Notebook 1 --- \texttt{notebook1\_cnn\_desde\_cero.ipynb}        & 3.0 \\
+Notebook 2 --- \texttt{notebook2\_data\_augmentation.ipynb} & 2.5 \\
+Notebook 3 --- \texttt{notebook3\_clasificador\_tapitas.ipynb} & 3.0 \\
+Discusión crítica                                       & 1.5 \\
 \midrule
 \textbf{Total Guía 1} & \textbf{10.0} \\
 \bottomrule
@@ -707,11 +762,11 @@ Discusión crítica                                       & 2.0 \\
 % =============================================================================
 \section{Cierre: el límite del entrenamiento desde cero}\label{sec:cierre}
 
-La actividad de evaluación sobre datos propios suele revelar un
-resultado aleccionador: el clasificador, entrenado desde cero con un
-dataset reducido, alcanza buena \emph{accuracy} sobre el conjunto de
-validación, pero \textbf{falla al enfrentar fotografías reales} tomadas
-en condiciones de iluminación, fondo o ángulo distintas a las del
+La evaluación sobre datos propios ---tanto las fotografías de botellas
+(Notebook 1) como el clasificador de tapitas entrenado desde cero
+(Notebook 3)--- suele revelar un resultado aleccionador: el modelo alcanza
+buena \emph{accuracy} sobre validación, pero \textbf{falla al enfrentar
+condiciones reales} de iluminación, fondo o ángulo distintas a las del
 entrenamiento. La aumentación de datos (Notebook~2) mitiga parcialmente
 el problema, pero no lo resuelve: una CNN entrenada desde cero necesita,
 para generalizar bien, muchas más imágenes de las que es razonable
@@ -723,7 +778,8 @@ entrenada sobre millones de imágenes y se reutiliza su conocimiento ---el
 \emph{aprendizaje por transferencia} (\emph{transfer learning})---, lo
 que permite obtener clasificadores robustos con apenas unos cientos de
 imágenes por clase. Sobre esa técnica se construye el sistema de control
-de calidad industrial de la segunda parte del laboratorio.
+de calidad industrial de la segunda parte del laboratorio, reutilizando el
+dataset de tapitas del Notebook 3.
 
 % =============================================================================
 \section{Anexos}
