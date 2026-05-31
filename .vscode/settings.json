@@ -1,0 +1,7 @@
+{
+  // El kernel de Jupyter usa como working directory la carpeta del notebook
+  // (no la raíz del workspace). Así las rutas relativas de los notebooks
+  // (../data, modelos, ...) funcionan igual en VS Code que en Jupyter,
+  // tanto en Windows como en WSL.
+  "jupyter.notebookFileRoot": "${fileDirname}"
+}
