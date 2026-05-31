@@ -176,6 +176,13 @@ en \texttt{data/tapitas/} siguiendo la convención de
 transferencia, para contrastar el desempeño frente a la CNN entrenada desde
 cero del Notebook~3.
 
+Además de los tres colores, el dataset incluye una cuarta clase
+\texttt{fondo} (imágenes sin tapita), de modo que el modelo tenga
+\textbf{cuatro salidas} y no se vea forzado a elegir un color cuando no hay
+objeto frente a la cámara. La clase \texttt{fondo} es puramente defensiva:
+\textbf{no activa ninguna salida del PLC} (solo los tres colores tienen una
+variable \texttt{BOOL} asociada).
+
 Si el dataset resultó escaso o poco variado, esta es una buena oportunidad
 para ampliarlo: añadir muestras con mayor variación de iluminación, fondo y
 ángulo mejora la robustez del modelo. Se mantiene la división 80\,\%
@@ -321,7 +328,7 @@ from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
-NUM_CLASSES = 3  # amarillo, azul, rojo
+NUM_CLASSES = 4  # amarillo, azul, fondo, rojo
 
 # 1. Cargar backbone pre-entrenado
 backbone = MobileNetV2(
@@ -506,10 +513,12 @@ from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
 UMBRAL_CONFIANZA = 0.85
 IMG_SIZE = 128                          # mismo tamano usado al entrenar (NB4)
-CLASES = ['amarillo', 'azul', 'rojo']   # orden alfabetico
-VARIABLES = ['VARIABLES.bAmarillo',
-             'VARIABLES.bAzul',
-             'VARIABLES.bRojo']
+CLASES = ['amarillo', 'azul', 'fondo', 'rojo']   # orden alfabetico (igual que el entrenamiento)
+VAR_POR_CLASE = {                 # 'fondo' no activa ninguna salida
+    'rojo':     'VARIABLES.bRojo',
+    'azul':     'VARIABLES.bAzul',
+    'amarillo': 'VARIABLES.bAmarillo',
+}
 
 # Cargar modelo y abrir conexion ADS
 modelo = load_model('modelo_tapitas.h5')
@@ -532,16 +541,17 @@ try:
         # Prediccion
         pred = modelo.predict(x, verbose=0)[0]
         idx = int(np.argmax(pred))
+        clase = CLASES[idx]
         confianza = float(pred[idx])
 
-        # Decision: solo se activa la variable si la confianza supera
-        # el umbral. Las otras dos se mantienen en False.
-        for i, var in enumerate(VARIABLES):
-            activo = (i == idx) and (confianza >= UMBRAL_CONFIANZA)
-            ipc.write_by_name(var, activo, pyads.PLCTYPE_BOOL)
+        # Decision: se activa el BOOL del color detectado solo si la
+        # confianza supera el umbral; el resto (y 'fondo') quedan en False.
+        activo = VAR_POR_CLASE.get(clase) if confianza >= UMBRAL_CONFIANZA else None
+        for var in VAR_POR_CLASE.values():
+            ipc.write_by_name(var, var == activo, pyads.PLCTYPE_BOOL)
 
         # Visualizacion opcional
-        etiqueta = f"{CLASES[idx]} ({confianza:.2f})"
+        etiqueta = f"{clase} ({confianza:.2f})"
         cv2.putText(frame, etiqueta, (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
         cv2.imshow('Clasificador', frame)
@@ -551,7 +561,7 @@ finally:
     cam.release()
     cv2.destroyAllWindows()
     # Limpiar variables antes de cerrar
-    for var in VARIABLES:
+    for var in VAR_POR_CLASE.values():
         ipc.write_by_name(var, False, pyads.PLCTYPE_BOOL)
     ipc.close()
 \end{lstlisting}
