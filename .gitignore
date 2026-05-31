@@ -36,3 +36,6 @@ captura_*.jpg
 .vscode/*
 !.vscode/settings.json
 .idea/
+
+# Videos de tapitas grabados/subidos por el alumno
+data/videos_tapitas/
