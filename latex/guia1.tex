@@ -217,13 +217,14 @@ $62\times62$ y luego a $29\times29$ (convolución \emph{valid}), y cada
 \texttt{MaxPooling2D} de $2\times2$ lo lleva a $31\times31$ y
 $14\times14$ respectivamente. El resultado se aplana
 (\texttt{Flatten}) y se conecta a una capa densa de $128$ neuronas con
-\emph{Dropout} de $0.5$, y finalmente a una capa de salida de $2$
-neuronas con activación \emph{softmax} (vidrio / plástico).
+activación \emph{ReLU} y \emph{Dropout} de $0.5$, y finalmente a una
+capa de salida de $2$ neuronas con activación \emph{softmax}
+(vidrio / plástico).
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{../docs/assets/g1/arquitectura_botellas.png}
-\caption{Arquitectura de la CNN entrenada desde cero en la experiencia guiada (clasificador de botellas). Dos bloques \texttt{Conv2D}($32$, $3\times3$) + \texttt{MaxPooling2D}($2\times2$) extraen las características; tras \texttt{Flatten}, una capa densa de $128$ neuronas con \emph{dropout} $0.5$ y una capa de salida \emph{softmax} de $2$ neuronas producen la clasificación. Fuente: elaboración propia.}
+\caption{Arquitectura de la CNN entrenada desde cero en la experiencia guiada (clasificador de botellas). Dos bloques \texttt{Conv2D}($32$, $3\times3$) + \texttt{MaxPooling2D}($2\times2$) extraen las características; tras \texttt{Flatten}, una capa densa de $128$ neuronas (\emph{ReLU}) con \emph{dropout} $0.5$ y una capa de salida \emph{softmax} de $2$ neuronas producen la clasificación. Fuente: elaboración propia.}
 \label{fig:arch}
 \end{figure}
 
@@ -554,8 +555,8 @@ total sobre 20.
 La arquitectura es la CNN sencilla descrita en la
 Figura~\ref{fig:arch}: dos bloques \texttt{Conv2D}($32$,
 $3\times3$)\,+\,\texttt{MaxPooling2D}, seguidos de \texttt{Flatten}, una
-capa densa de $128$ neuronas con \emph{dropout} $0.5$ y una capa de
-salida \emph{softmax} de dos neuronas. El dataset se organiza en
+capa densa de $128$ neuronas (\emph{ReLU}) con \emph{dropout} $0.5$ y una
+capa de salida \emph{softmax} de dos neuronas. El dataset se organiza en
 subcarpetas, una por clase, dentro de \texttt{train/} y
 \texttt{validation/}, de modo que \texttt{ImageDataGenerator} infiera
 las etiquetas automáticamente:
